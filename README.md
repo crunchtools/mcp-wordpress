@@ -2,6 +2,26 @@
 
 A secure MCP (Model Context Protocol) server for WordPress content management. Designed for developers publishing about their work.
 
+## Overview
+
+This MCP server is designed to be:
+
+- **Secure by default** - Comprehensive input validation, credential protection, and SSRF prevention
+- **No third-party services** - Runs locally via stdio, your credentials never leave your machine
+- **Cross-platform** - Works on Linux, macOS, and Windows
+- **Automatically updated** - GitHub Actions monitor for CVEs and update dependencies
+- **Containerized** - Available at `quay.io/crunchtools/mcp-wordpress`
+
+## Naming Convention
+
+| Component | Name |
+|-----------|------|
+| GitHub repo | [crunchtools/mcp-wordpress](https://github.com/crunchtools/mcp-wordpress) |
+| Container | `quay.io/crunchtools/mcp-wordpress` |
+| Python package (PyPI) | `mcp-wordpress-crunchtools` |
+| CLI command | `mcp-wordpress-crunchtools` |
+| Module import | `mcp_wordpress_crunchtools` |
+
 ## Features
 
 - **30 Tools** for posts, pages, media, and comments
@@ -24,30 +44,13 @@ pip install mcp-wordpress-crunchtools
 mcp-wordpress-crunchtools
 ```
 
-### With Container (Podman/Docker)
+### With Container
 
 ```bash
-# Pull the image
-podman pull quay.io/crunchtools/mcp-wordpress:latest
-
-# Run with environment variables
-podman run --rm -it \
-  -e WORDPRESS_URL=https://example.com \
+podman run -e WORDPRESS_URL=https://example.com \
   -e WORDPRESS_USERNAME=admin \
   -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
-  quay.io/crunchtools/mcp-wordpress:latest
-```
-
-Or with Docker:
-
-```bash
-docker pull quay.io/crunchtools/mcp-wordpress:latest
-
-docker run --rm -it \
-  -e WORDPRESS_URL=https://example.com \
-  -e WORDPRESS_USERNAME=admin \
-  -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
-  quay.io/crunchtools/mcp-wordpress:latest
+  quay.io/crunchtools/mcp-wordpress
 ```
 
 ### From source
@@ -108,11 +111,11 @@ claude mcp add mcp-wordpress-crunchtools \
     --env WORDPRESS_URL=https://example.com \
     --env WORDPRESS_USERNAME=admin \
     --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
-    -- podman run --rm -i \
+    -- podman run -i --rm \
         -e WORDPRESS_URL \
         -e WORDPRESS_USERNAME \
         -e WORDPRESS_APP_PASSWORD \
-        quay.io/crunchtools/mcp-wordpress:latest
+        quay.io/crunchtools/mcp-wordpress
 ```
 
 ## Available Tools
