@@ -21,6 +21,33 @@ uvx mcp-wordpress-crunchtools
 
 ```bash
 pip install mcp-wordpress-crunchtools
+mcp-wordpress-crunchtools
+```
+
+### With Container (Podman/Docker)
+
+```bash
+# Pull the image
+podman pull quay.io/crunchtools/mcp-wordpress:latest
+
+# Run with environment variables
+podman run --rm -it \
+  -e WORDPRESS_URL=https://example.com \
+  -e WORDPRESS_USERNAME=admin \
+  -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
+  quay.io/crunchtools/mcp-wordpress:latest
+```
+
+Or with Docker:
+
+```bash
+docker pull quay.io/crunchtools/mcp-wordpress:latest
+
+docker run --rm -it \
+  -e WORDPRESS_URL=https://example.com \
+  -e WORDPRESS_USERNAME=admin \
+  -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
+  quay.io/crunchtools/mcp-wordpress:latest
 ```
 
 ### From source
@@ -52,12 +79,40 @@ Set these environment variables:
 
 ## Usage with Claude Code
 
+### Using uvx (recommended)
+
 ```bash
 claude mcp add mcp-wordpress-crunchtools \
     --env WORDPRESS_URL=https://example.com \
     --env WORDPRESS_USERNAME=admin \
     --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
     -- uvx mcp-wordpress-crunchtools
+```
+
+### Using pip
+
+```bash
+pip install mcp-wordpress-crunchtools
+
+claude mcp add mcp-wordpress-crunchtools \
+    --env WORDPRESS_URL=https://example.com \
+    --env WORDPRESS_USERNAME=admin \
+    --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
+    -- mcp-wordpress-crunchtools
+```
+
+### Using Container
+
+```bash
+claude mcp add mcp-wordpress-crunchtools \
+    --env WORDPRESS_URL=https://example.com \
+    --env WORDPRESS_USERNAME=admin \
+    --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
+    -- podman run --rm -i \
+        -e WORDPRESS_URL \
+        -e WORDPRESS_USERNAME \
+        -e WORDPRESS_APP_PASSWORD \
+        quay.io/crunchtools/mcp-wordpress:latest
 ```
 
 ## Available Tools
