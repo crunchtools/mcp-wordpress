@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 # Create the FastMCP server
 mcp = FastMCP(
     name="mcp-wordpress-crunchtools",
-    version="0.1.0",
+    version="0.2.0",
     instructions="Secure MCP server for WordPress content management",
 )
 

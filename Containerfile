@@ -14,7 +14,7 @@ FROM python:3.12-slim
 
 LABEL maintainer="crunchtools.com"
 LABEL description="Secure MCP server for WordPress content management"
-LABEL version="0.1.0"
+LABEL version="0.2.0"
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash mcp
