@@ -47,7 +47,8 @@ mcp-wordpress-crunchtools
 ### With Container
 
 ```bash
-podman run -e WORDPRESS_URL=https://example.com \
+podman run -v /tmp/mcp-uploads:/tmp/mcp-uploads:Z \
+  -e WORDPRESS_URL=https://example.com \
   -e WORDPRESS_USERNAME=admin \
   -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
   quay.io/crunchtools/mcp-wordpress
@@ -112,6 +113,7 @@ claude mcp add mcp-wordpress-crunchtools \
     --env WORDPRESS_USERNAME=admin \
     --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
     -- podman run -i --rm \
+        -v /tmp/mcp-uploads:/tmp/mcp-uploads:Z \
         -e WORDPRESS_URL \
         -e WORDPRESS_USERNAME \
         -e WORDPRESS_APP_PASSWORD \
@@ -155,7 +157,7 @@ claude mcp add mcp-wordpress-crunchtools \
 |------|-------------|
 | `wordpress_list_media` | List media items |
 | `wordpress_get_media` | Get media item details |
-| `wordpress_upload_media` | Upload file from base64 |
+| `wordpress_upload_media` | Upload file from local path |
 | `wordpress_update_media` | Update media metadata |
 | `wordpress_delete_media` | Delete media item |
 | `wordpress_get_media_url` | Get public URL for media |
