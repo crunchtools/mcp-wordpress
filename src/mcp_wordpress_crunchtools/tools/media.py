@@ -99,7 +99,14 @@ def _read_upload_file(
     if not os.path.isabs(file_path):
         return ("file_path must be an absolute path", b"", "", "")
     if not os.path.isfile(file_path):
-        return (f"File not found: {file_path}", b"", "", "")
+        return (
+            f"File not found: {file_path}. If running as a container, files must be "
+            "placed in the mounted directory (e.g., /tmp/mcp-uploads/) on the host "
+            "to be accessible inside the container.",
+            b"",
+            "",
+            "",
+        )
 
     file_size = os.path.getsize(file_path)
     if file_size == 0:
