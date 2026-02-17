@@ -3,12 +3,15 @@
 Tools for uploading, managing, and retrieving WordPress media items.
 """
 
-import base64
 import mimetypes
+import os
 from typing import Any
 
 from ..client import get_client
 from ..models import validate_media_id
+
+# Maximum upload size (50MB)
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024
 
 
 async def list_media(
@@ -84,19 +87,52 @@ async def get_media(media_id: int) -> dict[str, Any]:
     return {"error": "Unexpected response format"}
 
 
+def _read_upload_file(
+    file_path: str,
+) -> tuple[str | None, bytes, str, str]:
+    """Validate and read a file for upload.
+
+    Returns:
+        Tuple of (error_message, file_bytes, filename, content_type).
+        error_message is None on success.
+    """
+    if not os.path.isabs(file_path):
+        return ("file_path must be an absolute path", b"", "", "")
+    if not os.path.isfile(file_path):
+        return (f"File not found: {file_path}", b"", "", "")
+
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        return ("File is empty", b"", "", "")
+    if file_size > MAX_UPLOAD_SIZE:
+        max_mb = MAX_UPLOAD_SIZE // (1024 * 1024)
+        return (f"File too large ({file_size} bytes). Max: {max_mb}MB.", b"", "", "")
+
+    filename = os.path.basename(file_path)
+    content_type, _ = mimetypes.guess_type(filename)
+    if not content_type:
+        content_type = "application/octet-stream"
+
+    try:
+        with open(file_path, "rb") as f:
+            file_bytes = f.read()
+    except OSError as e:
+        return (f"Cannot read file: {e}", b"", "", "")
+
+    return (None, file_bytes, filename, content_type)
+
+
 async def upload_media(
-    file_data: str,
-    filename: str,
+    file_path: str,
     title: str | None = None,
     alt_text: str | None = None,
     caption: str | None = None,
     description: str | None = None,
 ) -> dict[str, Any]:
-    """Upload a media file from base64-encoded data.
+    """Upload a media file from a local file path.
 
     Args:
-        file_data: Base64-encoded file data
-        filename: Filename with extension (e.g., image.png)
+        file_path: Absolute path to the file on disk
         title: Media title
         alt_text: Alt text for accessibility
         caption: Media caption
@@ -107,18 +143,11 @@ async def upload_media(
     """
     client = get_client()
 
-    # Decode base64 data
-    try:
-        file_bytes = base64.b64decode(file_data)
-    except Exception as e:
-        return {"error": f"Invalid base64 data: {e}"}
+    # Validate file path and read contents
+    error, file_bytes, filename, content_type = _read_upload_file(file_path)
+    if error:
+        return {"error": error}
 
-    # Determine content type
-    content_type, _ = mimetypes.guess_type(filename)
-    if not content_type:
-        content_type = "application/octet-stream"
-
-    # Prepare the file for upload
     # WordPress expects multipart/form-data with the file
     files = {
         "file": (filename, file_bytes, content_type),

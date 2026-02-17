@@ -545,18 +545,19 @@ async def wordpress_get_media(media_id: int) -> dict[str, Any]:
 
 @mcp.tool()
 async def wordpress_upload_media(
-    file_data: str,
-    filename: str,
+    file_path: str,
     title: str | None = None,
     alt_text: str | None = None,
     caption: str | None = None,
     description: str | None = None,
 ) -> dict[str, Any]:
-    """Upload a media file to WordPress from base64-encoded data.
+    """Upload a media file to WordPress from a local file path.
+
+    The file is read directly from disk, avoiding large base64 payloads
+    over the MCP protocol. Provide an absolute path to the file.
 
     Args:
-        file_data: Base64-encoded file data
-        filename: Filename with extension (e.g., image.png)
+        file_path: Absolute path to the file on disk (e.g., /tmp/image.png)
         title: Media title
         alt_text: Alt text for accessibility
         caption: Media caption
@@ -566,8 +567,7 @@ async def wordpress_upload_media(
         Uploaded media item details
     """
     return await upload_media(
-        file_data=file_data,
-        filename=filename,
+        file_path=file_path,
         title=title,
         alt_text=alt_text,
         caption=caption,

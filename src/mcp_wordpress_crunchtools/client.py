@@ -59,7 +59,6 @@ class WordPressClient:
                 base_url=self._config.api_base_url,
                 headers={
                     "Authorization": self._get_auth_header(),
-                    "Content-Type": "application/json",
                 },
                 timeout=httpx.Timeout(REQUEST_TIMEOUT),
                 # Enable TLS certificate verification (default, but explicit)
@@ -118,9 +117,8 @@ class WordPressClient:
         if data:
             request_kwargs["data"] = data
         if files:
-            # For file uploads, remove Content-Type header (httpx sets it)
+            # For file uploads, let httpx set multipart Content-Type with boundary
             request_kwargs["files"] = files
-            request_kwargs["headers"] = {"Authorization": self._get_auth_header()}
 
         try:
             response = await client.request(**request_kwargs)
