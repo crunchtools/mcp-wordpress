@@ -75,7 +75,7 @@ src/mcp_wordpress_crunchtools/
 ### Media Tools (6)
 - `wordpress_list_media` - List media items
 - `wordpress_get_media` - Get media details
-- `wordpress_upload_media` - Upload from base64
+- `wordpress_upload_media` - Upload from local file path
 - `wordpress_update_media` - Update metadata
 - `wordpress_delete_media` - Delete media
 - `wordpress_get_media_url` - Get public URL

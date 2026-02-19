@@ -47,7 +47,10 @@ mcp-wordpress-crunchtools
 ### With Container
 
 ```bash
-podman run -v /tmp/mcp-uploads:/tmp/mcp-uploads:Z \
+# Create the upload directory (required before first run)
+mkdir -p ~/.local/share/mcp-wordpress/uploads
+
+podman run -v ~/.local/share/mcp-wordpress/uploads:/tmp/mcp-uploads:Z \
   -e WORDPRESS_URL=https://example.com \
   -e WORDPRESS_USERNAME=admin \
   -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
@@ -72,6 +75,7 @@ Set these environment variables:
 | `WORDPRESS_URL` | WordPress site URL | `https://example.com` |
 | `WORDPRESS_USERNAME` | WordPress username | `admin` |
 | `WORDPRESS_APP_PASSWORD` | Application password | `xxxx xxxx xxxx xxxx` |
+| `MCP_UPLOAD_DIR` | Upload directory inside container (optional) | `/tmp/mcp-uploads` (default) |
 
 ### Creating an Application Password
 
@@ -108,12 +112,15 @@ claude mcp add mcp-wordpress-crunchtools \
 ### Using Container
 
 ```bash
+# Create the upload directory (required before first run)
+mkdir -p ~/.local/share/mcp-wordpress/uploads
+
 claude mcp add mcp-wordpress-crunchtools \
     --env WORDPRESS_URL=https://example.com \
     --env WORDPRESS_USERNAME=admin \
     --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
     -- podman run -i --rm \
-        -v /tmp/mcp-uploads:/tmp/mcp-uploads:Z \
+        -v ~/.local/share/mcp-wordpress/uploads:/tmp/mcp-uploads:Z \
         -e WORDPRESS_URL \
         -e WORDPRESS_USERNAME \
         -e WORDPRESS_APP_PASSWORD \

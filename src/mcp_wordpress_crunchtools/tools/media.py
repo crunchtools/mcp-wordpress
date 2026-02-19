@@ -100,9 +100,9 @@ def _read_upload_file(
         return ("file_path must be an absolute path", b"", "", "")
     if not os.path.isfile(file_path):
         return (
-            f"File not found: {file_path}. If running as a container, files must be "
-            "placed in the mounted directory (e.g., /tmp/mcp-uploads/) on the host "
-            "to be accessible inside the container.",
+            f"File not found: {file_path}. If running as a container, place files in "
+            "the host upload directory (default: ~/.local/share/mcp-wordpress/uploads/) "
+            "which is mounted to the MCP_UPLOAD_DIR inside the container.",
             b"",
             "",
             "",

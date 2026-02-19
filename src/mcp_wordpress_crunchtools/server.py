@@ -46,12 +46,13 @@ logger = logging.getLogger(__name__)
 # Create the FastMCP server
 mcp = FastMCP(
     name="mcp-wordpress-crunchtools",
-    version="0.2.1",
+    version="0.3.0",
     instructions=(
         "Secure MCP server for WordPress content management. "
         "For media uploads: when running as a container, files must be placed in "
-        "/tmp/mcp-uploads/ on the host (mounted into the container). Use absolute "
-        "paths like /tmp/mcp-uploads/image.png for the file_path parameter."
+        "~/.local/share/mcp-wordpress/uploads/ on the host (mounted to "
+        "/tmp/mcp-uploads/ inside the container). Use absolute paths like "
+        "/tmp/mcp-uploads/image.png for the file_path parameter."
     ),
 )
 
@@ -562,9 +563,9 @@ async def wordpress_upload_media(
     over the MCP protocol. Provide an absolute path to the file.
 
     CONTAINER NOTE: When running as a container, the file path refers to
-    the container filesystem, not the host. Files must be placed in the
-    mounted directory (default: /tmp/mcp-uploads/) on the host to be
-    accessible inside the container.
+    the container filesystem, not the host. Files must be placed in
+    ~/.local/share/mcp-wordpress/uploads/ on the host (mounted to
+    /tmp/mcp-uploads/ inside the container) to be accessible.
 
     Args:
         file_path: Absolute path to the file (e.g., /tmp/mcp-uploads/image.png)
