@@ -47,15 +47,25 @@ mcp-wordpress-crunchtools
 ### With Container
 
 ```bash
-# Create the upload directory (required before first run)
-mkdir -p ~/.local/share/mcp-wordpress/uploads
+# Create a shared upload directory (required before first run)
+mkdir -p ~/.local/share/mcp-uploads-downloads
 
-podman run -v ~/.local/share/mcp-wordpress/uploads:/tmp/mcp-uploads:Z \
+podman run -v ~/.local/share/mcp-uploads-downloads:/tmp/mcp-uploads:z \
   -e WORDPRESS_URL=https://example.com \
   -e WORDPRESS_USERNAME=admin \
   -e WORDPRESS_APP_PASSWORD='xxxx xxxx xxxx xxxx' \
   quay.io/crunchtools/mcp-wordpress
 ```
+
+> **SELinux note:** Use `:z` (lowercase, shared) instead of `:Z` (uppercase, private).
+> MCP servers run as long-lived stdio processes. With `:Z`, files copied into the
+> directory after container start won't have the container's private MCS label and
+> will be invisible inside the container. The `:z` flag sets a shared
+> `container_file_t` context that all containers and the host can read/write.
+>
+> **Tip:** Use the same shared directory (`~/.local/share/mcp-uploads-downloads/`)
+> across multiple MCP container servers (e.g., mcp-wordpress and mcp-gemini) so
+> generated files are immediately available for upload without copying.
 
 ### From source
 
@@ -112,15 +122,15 @@ claude mcp add mcp-wordpress-crunchtools \
 ### Using Container
 
 ```bash
-# Create the upload directory (required before first run)
-mkdir -p ~/.local/share/mcp-wordpress/uploads
+# Create a shared upload directory (required before first run)
+mkdir -p ~/.local/share/mcp-uploads-downloads
 
 claude mcp add mcp-wordpress-crunchtools \
     --env WORDPRESS_URL=https://example.com \
     --env WORDPRESS_USERNAME=admin \
     --env WORDPRESS_APP_PASSWORD="xxxx xxxx xxxx xxxx" \
     -- podman run -i --rm \
-        -v ~/.local/share/mcp-wordpress/uploads:/tmp/mcp-uploads:Z \
+        -v ~/.local/share/mcp-uploads-downloads:/tmp/mcp-uploads:z \
         -e WORDPRESS_URL \
         -e WORDPRESS_USERNAME \
         -e WORDPRESS_APP_PASSWORD \
