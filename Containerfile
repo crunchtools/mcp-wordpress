@@ -4,15 +4,22 @@
 #   podman build -t mcp-wordpress-crunchtools -f Containerfile .
 #
 # Setup (create upload directory on host before first run):
-#   mkdir -p ~/.local/share/mcp-wordpress/uploads
+#   mkdir -p ~/.local/share/mcp-uploads-downloads
 #
-# Run:
-#   podman run --rm -it \
-#     -v ~/.local/share/mcp-wordpress/uploads:/tmp/mcp-uploads:Z \
+# Run (stdio):
+#   podman run --rm -i \
+#     -v ~/.local/share/mcp-uploads-downloads:/tmp/mcp-uploads:z \
 #     -e WORDPRESS_URL=https://example.com \
 #     -e WORDPRESS_USERNAME=admin \
 #     -e WORDPRESS_APP_PASSWORD=xxxx_xxxx_xxxx_xxxx \
 #     mcp-wordpress-crunchtools
+#
+# Run (HTTP):
+#   podman run -d --name mcp-wordpress -p 127.0.0.1:8002:8000 \
+#     -v ~/.local/share/mcp-uploads-downloads:/tmp/mcp-uploads:z \
+#     --env-file ~/.config/mcp-env/mcp-wordpress-crunchtools.env \
+#     mcp-wordpress-crunchtools \
+#     --transport streamable-http --host 0.0.0.0
 
 FROM python:3.12-slim
 
@@ -44,6 +51,9 @@ USER mcp
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
+# Expose port for HTTP transports
+EXPOSE 8000
 
 # Run the MCP server
 ENTRYPOINT ["mcp-wordpress-crunchtools"]

@@ -27,6 +27,7 @@ Example with Claude Code:
         -- uvx mcp-wordpress-crunchtools
 """
 
+import argparse
 import os
 
 from .server import mcp
@@ -39,6 +40,30 @@ DEFAULT_UPLOAD_DIR = "/tmp/mcp-uploads"
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    parser = argparse.ArgumentParser(description="MCP server for WordPress")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default="stdio",
+        help="Transport protocol (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to for HTTP transports (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to for HTTP transports (default: 8000)",
+    )
+    args = parser.parse_args()
+
     upload_dir = os.environ.get("MCP_UPLOAD_DIR", DEFAULT_UPLOAD_DIR)
     os.makedirs(upload_dir, exist_ok=True)
-    mcp.run()
+
+    if args.transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
