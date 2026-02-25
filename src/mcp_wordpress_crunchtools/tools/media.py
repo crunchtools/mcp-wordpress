@@ -101,8 +101,8 @@ def _read_upload_file(
     if not os.path.isfile(file_path):
         return (
             f"File not found: {file_path}. If running as a container, place files in "
-            "the host upload directory (default: ~/.local/share/mcp-wordpress/uploads/) "
-            "which is mounted to the MCP_UPLOAD_DIR inside the container.",
+            "the host upload directory (default: ~/.local/share/mcp-uploads-downloads/) "
+            "which is mounted to /tmp/mcp-uploads/ inside the container.",
             b"",
             "",
             "",
