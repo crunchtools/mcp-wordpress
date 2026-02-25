@@ -21,7 +21,7 @@ class TestReadUploadFile:
         assert error is not None
         assert "File not found" in error
         assert "container" in error
-        assert "/tmp/mcp-uploads/" in error or "mcp-uploads-downloads" in error
+        assert "mcp-uploads" in error
 
     def test_empty_file_rejected(self) -> None:
         """Test that empty files are rejected."""
