@@ -251,3 +251,5 @@ AGPL-3.0-or-later
 ## Credits
 
 Built by [crunchtools.com](https://crunchtools.com)
+
+<!-- mcp-name: io.github.crunchtools/wordpress -->
