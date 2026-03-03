@@ -1,0 +1,32 @@
+# Gourmand Exceptions
+# Documented exceptions for files that legitimately trigger checks
+
+# Summary litter — CLAUDE.md is a standard Claude Code project instructions file
+[[exceptions]]
+check = "summary_litter"
+path = "CLAUDE.md"
+justification = "Claude Code project instructions for AI assistant orientation"
+
+# Primitive obsession — port 8000 is a standard default for HTTP servers
+[[exceptions]]
+check = "primitive_obsession"
+path = "src/mcp_wordpress_crunchtools/__init__.py"
+justification = "Port 8000 is a standard default for HTTP servers"
+
+# Primitive obsession — HTTP status codes and timeout are standard API patterns
+[[exceptions]]
+check = "primitive_obsession"
+path = "src/mcp_wordpress_crunchtools/client.py"
+justification = "HTTP status codes (401, 403, 404, 429) and timeout (30s) are standard well-known constants"
+
+# Primitive obsession — file size limits are standard upload validation
+[[exceptions]]
+check = "primitive_obsession"
+path = "src/mcp_wordpress_crunchtools/tools/media.py"
+justification = "MAX_UPLOAD_SIZE (50MB) is a standard file upload safety limit"
+
+# Primitive obsession — HTTP status code 200 and mock URL are standard test patterns
+[[exceptions]]
+check = "primitive_obsession"
+path = "tests/conftest.py"
+justification = "HTTP status code 200 and wp.example.com URL are standard test fixture patterns"

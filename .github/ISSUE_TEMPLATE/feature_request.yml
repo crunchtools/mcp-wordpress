@@ -1,0 +1,64 @@
+name: Feature Request
+description: Suggest a new tool or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: I need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the tool or change you'd like
+      placeholder: |
+        Tool name: `wordpress_do_something`
+        WordPress REST API endpoint: `GET/POST /wp/v2/endpoint`
+        Parameters: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Tool Category
+      description: Which area does this feature belong to?
+      options:
+        - Site
+        - Posts
+        - Pages
+        - Media
+        - Comments
+        - New Category
+    validations:
+      required: true
+
+  - type: dropdown
+    id: wp_api
+    attributes:
+      label: WordPress REST API Reference
+      description: Does this correspond to an existing WordPress REST API endpoint?
+      options:
+        - "Yes - documented in WordPress REST API"
+        - "No - new behavior / aggregation"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information or examples

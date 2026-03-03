@@ -44,6 +44,9 @@ htmlcov/
 # ruff
 .ruff_cache/
 
+# gourmand
+.gourmand-cache/
+
 # OS
 .DS_Store
 Thumbs.db

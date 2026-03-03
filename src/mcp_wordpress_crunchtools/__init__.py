@@ -32,7 +32,7 @@ import os
 
 from .server import mcp
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __all__ = ["main", "mcp"]
 
 DEFAULT_UPLOAD_DIR = "/tmp/mcp-uploads"  # noqa: S108 — intentional container mount path

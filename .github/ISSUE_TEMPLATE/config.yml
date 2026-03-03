@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: WordPress REST API Documentation
+    url: https://developer.wordpress.org/rest-api/reference/
+    about: Check the WordPress REST API for endpoint behavior questions
