@@ -25,7 +25,10 @@ FROM python:3.12-slim
 
 LABEL maintainer="crunchtools.com"
 LABEL description="Secure MCP server for WordPress content management"
-LABEL version="0.3.0"
+LABEL version="0.5.0"
+LABEL org.opencontainers.image.source="https://github.com/crunchtools/mcp-wordpress"
+LABEL org.opencontainers.image.description="Secure MCP server for WordPress content management"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash mcp
