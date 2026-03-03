@@ -21,42 +21,39 @@
 #     mcp-wordpress-crunchtools \
 #     --transport streamable-http --host 0.0.0.0
 
-FROM python:3.12-slim
+# Use Hummingbird Python image (Red Hat UBI-based with Python pre-installed)
+FROM quay.io/hummingbird/python:latest
 
-LABEL maintainer="crunchtools.com"
-LABEL description="Secure MCP server for WordPress content management"
-LABEL version="0.5.0"
-LABEL org.opencontainers.image.source="https://github.com/crunchtools/mcp-wordpress"
-LABEL org.opencontainers.image.description="Secure MCP server for WordPress content management"
-LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
-
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash mcp
+# Labels for container metadata
+LABEL name="mcp-wordpress-crunchtools" \
+      version="0.5.0" \
+      summary="Secure MCP server for WordPress content management" \
+      description="A security-focused MCP server for WordPress built on Red Hat UBI" \
+      maintainer="crunchtools.com" \
+      url="https://github.com/crunchtools/mcp-wordpress" \
+      io.k8s.display-name="MCP WordPress CrunchTools" \
+      io.openshift.tags="mcp,wordpress,cms" \
+      org.opencontainers.image.source="https://github.com/crunchtools/mcp-wordpress" \
+      org.opencontainers.image.description="Secure MCP server for WordPress content management" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 # Set working directory
 WORKDIR /app
-
-# Install uv for fast package management
-RUN pip install --no-cache-dir uv
 
 # Copy project files
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
-# Install the package
-RUN uv pip install --system --no-cache .
+# Install the package and dependencies
+RUN pip install --no-cache-dir .
+
+# Verify installation
+RUN python -c "from mcp_wordpress_crunchtools import main; print('Installation verified')"
 
 # Create upload directory so server works with or without host volume mount
-RUN mkdir -p /tmp/mcp-uploads && chown mcp:mcp /tmp/mcp-uploads
+RUN mkdir -p /tmp/mcp-uploads && chmod 777 /tmp/mcp-uploads
 
-# Switch to non-root user
-USER mcp
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-
-# Expose port for HTTP transports
+# Default: stdio transport (use -i with podman run)
+# HTTP:    --transport streamable-http (use -d -p 8000:8000 with podman run)
 EXPOSE 8000
-
-# Run the MCP server
-ENTRYPOINT ["mcp-wordpress-crunchtools"]
+ENTRYPOINT ["python", "-m", "mcp_wordpress_crunchtools"]
