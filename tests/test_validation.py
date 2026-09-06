@@ -12,56 +12,21 @@ from mcp_wordpress_crunchtools.models import (
     PageUpdateInput,
     PostInput,
     PostUpdateInput,
-    validate_comment_id,
-    validate_media_id,
-    validate_page_id,
-    validate_post_id,
+    validate_positive_id,
 )
 
 
 class TestIdValidation:
-    """Tests for ID validation functions."""
+    """WordPress addresses posts, pages, media and comments by positive integer."""
 
-    def test_validate_post_id_valid(self) -> None:
-        """Test valid post ID."""
-        assert validate_post_id(1) == 1
-        assert validate_post_id(100) == 100
-        assert validate_post_id(999999) == 999999
+    @pytest.mark.parametrize("value", [1, 42, 100, 999999])
+    def test_accepts_positive_ids(self, value: int) -> None:
+        assert validate_positive_id(value) == value
 
-    def test_validate_post_id_invalid(self) -> None:
-        """Test invalid post ID."""
+    @pytest.mark.parametrize("value", [0, -1, -5])
+    def test_rejects_zero_and_negatives(self, value: int) -> None:
         with pytest.raises(ValueError, match="positive integer"):
-            validate_post_id(0)
-        with pytest.raises(ValueError, match="positive integer"):
-            validate_post_id(-1)
-
-    def test_validate_page_id_valid(self) -> None:
-        """Test valid page ID."""
-        assert validate_page_id(1) == 1
-        assert validate_page_id(42) == 42
-
-    def test_validate_page_id_invalid(self) -> None:
-        """Test invalid page ID."""
-        with pytest.raises(ValueError, match="positive integer"):
-            validate_page_id(0)
-
-    def test_validate_media_id_valid(self) -> None:
-        """Test valid media ID."""
-        assert validate_media_id(1) == 1
-
-    def test_validate_media_id_invalid(self) -> None:
-        """Test invalid media ID."""
-        with pytest.raises(ValueError, match="positive integer"):
-            validate_media_id(-5)
-
-    def test_validate_comment_id_valid(self) -> None:
-        """Test valid comment ID."""
-        assert validate_comment_id(1) == 1
-
-    def test_validate_comment_id_invalid(self) -> None:
-        """Test invalid comment ID."""
-        with pytest.raises(ValueError, match="positive integer"):
-            validate_comment_id(0)
+            validate_positive_id(value)
 
 
 class TestPostInput:

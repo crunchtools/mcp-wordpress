@@ -6,7 +6,8 @@ Tools for managing WordPress comments.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_comment_id
+from ..models import validate_positive_id
+from .formatting import get_rendered
 
 
 async def list_comments(
@@ -72,7 +73,7 @@ async def get_comment(comment_id: int) -> dict[str, Any]:
         Comment details
     """
     client = get_client()
-    comment_id = validate_comment_id(comment_id)
+    comment_id = validate_positive_id(comment_id)
 
     response = await client.get(f"/comments/{comment_id}")
 
@@ -139,7 +140,7 @@ async def update_comment(
         Updated comment details
     """
     client = get_client()
-    comment_id = validate_comment_id(comment_id)
+    comment_id = validate_positive_id(comment_id)
 
     comment_data: dict[str, Any] = {}
 
@@ -170,7 +171,7 @@ async def delete_comment(comment_id: int, force: bool = False) -> dict[str, Any]
         Deletion confirmation
     """
     client = get_client()
-    comment_id = validate_comment_id(comment_id)
+    comment_id = validate_positive_id(comment_id)
 
     params = {"force": str(force).lower()}
     response = await client.delete(f"/comments/{comment_id}", params=params)
@@ -207,28 +208,12 @@ async def moderate_comment(
     }
 
     if action not in action_to_status:
-        return {
-            "error": f"Invalid action. Must be one of: {', '.join(action_to_status.keys())}"
-        }
+        return {"error": f"Invalid action. Must be one of: {', '.join(action_to_status.keys())}"}
 
     return await update_comment(comment_id, status=action_to_status[action])
 
 
-def _get_rendered(field: dict[str, Any] | str | None) -> str:
-    """Extract rendered content from WordPress response field."""
-    if field is None:
-        return ""
-    if isinstance(field, str):
-        return field
-    if isinstance(field, dict):
-        rendered = field.get("rendered", "")
-        return str(rendered) if rendered else ""
-    return ""
-
-
-def _format_comment(
-    comment: dict[str, Any], include_content: bool = False
-) -> dict[str, Any]:
+def _format_comment(comment: dict[str, Any], include_content: bool = False) -> dict[str, Any]:
     """Format a comment response for cleaner output."""
     formatted = {
         "id": comment.get("id"),
@@ -242,7 +227,7 @@ def _format_comment(
     }
 
     if include_content:
-        formatted["content"] = _get_rendered(comment.get("content"))
+        formatted["content"] = get_rendered(comment.get("content"))
         formatted["author_email"] = comment.get("author_email", "")
         formatted["author_url"] = comment.get("author_url", "")
 

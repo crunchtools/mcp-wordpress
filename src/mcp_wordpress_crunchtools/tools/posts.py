@@ -6,7 +6,8 @@ Tools for creating, reading, updating, and deleting WordPress posts.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_post_id
+from ..models import validate_positive_id
+from .formatting import add_embedded_author, format_common, get_rendered
 
 
 async def list_posts(
@@ -78,7 +79,7 @@ async def get_post(post_id: int) -> dict[str, Any]:
         Full post details including content
     """
     client = get_client()
-    post_id = validate_post_id(post_id)
+    post_id = validate_positive_id(post_id)
 
     response = await client.get(f"/posts/{post_id}", params={"_embed": "true"})
 
@@ -198,30 +199,24 @@ async def update_post(
         Updated post details
     """
     client = get_client()
-    post_id = validate_post_id(post_id)
+    post_id = validate_positive_id(post_id)
 
-    post_data: dict[str, Any] = {}
-
-    if title is not None:
-        post_data["title"] = title
-    if content is not None:
-        post_data["content"] = content
-    if status is not None:
-        post_data["status"] = status
-    if excerpt is not None:
-        post_data["excerpt"] = excerpt
-    if slug is not None:
-        post_data["slug"] = slug
-    if categories is not None:
-        post_data["categories"] = categories
-    if tags is not None:
-        post_data["tags"] = tags
-    if featured_media is not None:
-        post_data["featured_media"] = featured_media
-    if date is not None:
-        post_data["date"] = date
-    if post_format is not None:
-        post_data["format"] = post_format
+    post_data: dict[str, Any] = {
+        field: value
+        for field, value in (
+            ("title", title),
+            ("content", content),
+            ("status", status),
+            ("excerpt", excerpt),
+            ("slug", slug),
+            ("categories", categories),
+            ("tags", tags),
+            ("featured_media", featured_media),
+            ("date", date),
+            ("format", post_format),
+        )
+        if value is not None
+    }
 
     if not post_data:
         return {"error": "No fields to update"}
@@ -245,7 +240,7 @@ async def delete_post(post_id: int, force: bool = False) -> dict[str, Any]:
         Deletion confirmation
     """
     client = get_client()
-    post_id = validate_post_id(post_id)
+    post_id = validate_positive_id(post_id)
 
     params = {"force": str(force).lower()}
     response = await client.delete(f"/posts/{post_id}", params=params)
@@ -270,20 +265,22 @@ async def list_revisions(post_id: int) -> dict[str, Any]:
         List of revisions
     """
     client = get_client()
-    post_id = validate_post_id(post_id)
+    post_id = validate_positive_id(post_id)
 
     response = await client.get(f"/posts/{post_id}/revisions")
 
     revisions = []
     if isinstance(response, list):
         for rev in response:
-            revisions.append({
-                "id": rev.get("id"),
-                "author": rev.get("author"),
-                "date": rev.get("date"),
-                "modified": rev.get("modified"),
-                "title": _get_rendered(rev.get("title")),
-            })
+            revisions.append(
+                {
+                    "id": rev.get("id"),
+                    "author": rev.get("author"),
+                    "date": rev.get("date"),
+                    "modified": rev.get("modified"),
+                    "title": get_rendered(rev.get("title")),
+                }
+            )
 
     return {"revisions": revisions, "post_id": post_id}
 
@@ -299,8 +296,8 @@ async def get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
         Revision details with content
     """
     client = get_client()
-    post_id = validate_post_id(post_id)
-    revision_id = validate_post_id(revision_id)  # Same validation
+    post_id = validate_positive_id(post_id)
+    revision_id = validate_positive_id(revision_id)  # Same validation
 
     response = await client.get(f"/posts/{post_id}/revisions/{revision_id}")
 
@@ -310,9 +307,9 @@ async def get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
                 "id": response.get("id"),
                 "author": response.get("author"),
                 "date": response.get("date"),
-                "title": _get_rendered(response.get("title")),
-                "content": _get_rendered(response.get("content")),
-                "excerpt": _get_rendered(response.get("excerpt")),
+                "title": get_rendered(response.get("title")),
+                "content": get_rendered(response.get("content")),
+                "excerpt": get_rendered(response.get("excerpt")),
             }
         }
 
@@ -348,14 +345,16 @@ async def list_categories(
     categories = []
     if isinstance(response, list):
         for cat in response:
-            categories.append({
-                "id": cat.get("id"),
-                "name": cat.get("name"),
-                "slug": cat.get("slug"),
-                "description": cat.get("description"),
-                "count": cat.get("count"),
-                "parent": cat.get("parent"),
-            })
+            categories.append(
+                {
+                    "id": cat.get("id"),
+                    "name": cat.get("name"),
+                    "slug": cat.get("slug"),
+                    "description": cat.get("description"),
+                    "count": cat.get("count"),
+                    "parent": cat.get("parent"),
+                }
+            )
 
     return {"categories": categories}
 
@@ -389,54 +388,28 @@ async def list_tags(
     tags = []
     if isinstance(response, list):
         for tag in response:
-            tags.append({
-                "id": tag.get("id"),
-                "name": tag.get("name"),
-                "slug": tag.get("slug"),
-                "description": tag.get("description"),
-                "count": tag.get("count"),
-            })
+            tags.append(
+                {
+                    "id": tag.get("id"),
+                    "name": tag.get("name"),
+                    "slug": tag.get("slug"),
+                    "description": tag.get("description"),
+                    "count": tag.get("count"),
+                }
+            )
 
     return {"tags": tags}
 
 
-def _get_rendered(field: dict[str, Any] | str | None) -> str:
-    """Extract rendered content from WordPress response field."""
-    if field is None:
-        return ""
-    if isinstance(field, str):
-        return field
-    if isinstance(field, dict):
-        rendered = field.get("rendered", "")
-        return str(rendered) if rendered else ""
-    return ""
-
-
 def _format_post(post: dict[str, Any], include_content: bool = False) -> dict[str, Any]:
     """Format a post response for cleaner output."""
-    formatted = {
-        "id": post.get("id"),
-        "title": _get_rendered(post.get("title")),
-        "slug": post.get("slug"),
-        "status": post.get("status"),
-        "date": post.get("date"),
-        "modified": post.get("modified"),
-        "link": post.get("link"),
-        "author": post.get("author"),
-        "excerpt": _get_rendered(post.get("excerpt")),
-        "categories": post.get("categories", []),
-        "tags": post.get("tags", []),
-        "featured_media": post.get("featured_media"),
-        "format": post.get("format", "standard"),
-    }
+    formatted = format_common(post)
+    formatted["categories"] = post.get("categories", [])
+    formatted["tags"] = post.get("tags", [])
+    formatted["format"] = post.get("format", "standard")
 
     if include_content:
-        formatted["content"] = _get_rendered(post.get("content"))
+        formatted["content"] = get_rendered(post.get("content"))
 
-    # Include embedded author info if available
-    embedded = post.get("_embedded", {})
-    if author_list := embedded.get("author"):
-        author = author_list[0]
-        formatted["author_name"] = author.get("name")
-
+    add_embedded_author(formatted, post)
     return formatted

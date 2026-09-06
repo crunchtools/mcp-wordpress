@@ -18,6 +18,7 @@ from .errors import (
     PermissionDeniedError,
     PostNotFoundError,
     RateLimitError,
+    UserError,
     WordPressApiError,
 )
 
@@ -28,6 +29,25 @@ MAX_RESPONSE_SIZE = 10 * 1024 * 1024
 
 # Request timeout in seconds
 REQUEST_TIMEOUT = 30.0
+
+
+# WordPress returns a bare 404 for every collection, so the path is the only
+# clue to which kind of thing was missing.
+_NOT_FOUND_BY_COLLECTION = {
+    "posts": PostNotFoundError,
+    "pages": PageNotFoundError,
+    "media": MediaNotFoundError,
+    "comments": CommentNotFoundError,
+}
+
+
+def _not_found_error(path: str) -> UserError | None:
+    """The specific not-found error for a REST path, if the collection is known."""
+    resource_id = path.rsplit("/", maxsplit=1)[-1] if "/" in path else "unknown"
+    for collection, error in _NOT_FOUND_BY_COLLECTION.items():
+        if f"/{collection}/" in path or path.endswith(f"/{collection}"):
+            return error(resource_id)
+    return None
 
 
 class WordPressClient:
@@ -101,7 +121,6 @@ class WordPressClient:
         """
         client = await self._get_client()
 
-        # Log request (without sensitive data)
         logger.debug("API request: %s %s", method, path)
 
         # Prepare request kwargs
@@ -134,60 +153,47 @@ class WordPressClient:
 
         # Parse response
         try:
-            response_data = response.json()
+            payload: dict[str, Any] | list[Any] = response.json()
         except ValueError as e:
-            raise WordPressApiError(
-                "invalid_json", f"Invalid JSON response: {e}"
-            ) from e
+            raise WordPressApiError("invalid_json", f"Invalid JSON response: {e}") from e
 
         # Handle error responses
         if not response.is_success:
-            self._handle_error_response(response.status_code, response_data, path)
+            self._handle_error_response(response.status_code, payload, path)
 
-        return response_data  # type: ignore[no-any-return]
+        return payload
 
     def _handle_error_response(
-        self, status_code: int, data: dict[str, Any] | list[Any], path: str
+        self, status_code: int, payload: dict[str, Any] | list[Any], path: str
     ) -> None:
         """Handle error responses from the API.
 
         Args:
             status_code: HTTP status code
-            data: Response data
+            payload: Parsed response body
             path: Request path (for context)
 
         Raises:
             Various UserError subclasses based on error type
         """
-        # WordPress error format: {"code": "...", "message": "...", "data": {...}}
-        if isinstance(data, dict):
-            error_code = data.get("code", "unknown_error")
-            error_msg = data.get("message", "Unknown error")
+        if isinstance(payload, dict):
+            error_code = payload.get("code", "unknown_error")
+            error_msg = payload.get("message", "Unknown error")
         else:
             error_code = "unknown_error"
             error_msg = "Unknown error"
 
-        # Handle specific status codes
         if status_code == 401:
             raise PermissionDeniedError("authentication required")
         if status_code == 403:
             raise PermissionDeniedError("this operation")
         if status_code == 404:
-            # Determine resource type from path and extract ID
-            resource_id = path.rsplit("/", maxsplit=1)[-1] if "/" in path else "unknown"
-            if "/posts/" in path or path.endswith("/posts"):
-                raise PostNotFoundError(resource_id)
-            if "/pages/" in path or path.endswith("/pages"):
-                raise PageNotFoundError(resource_id)
-            if "/media/" in path or path.endswith("/media"):
-                raise MediaNotFoundError(resource_id)
-            if "/comments/" in path or path.endswith("/comments"):
-                raise CommentNotFoundError(resource_id)
-            raise WordPressApiError(error_code, error_msg)
+            not_found = _not_found_error(path)
+            raise not_found if not_found else WordPressApiError(error_code, error_msg)
         if status_code == 429:
             retry_after = None
-            if isinstance(data, dict) and "data" in data:
-                retry_after = data["data"].get("retry_after")
+            if isinstance(payload, dict) and "data" in payload:
+                retry_after = payload["data"].get("retry_after")
             raise RateLimitError(retry_after)
 
         raise WordPressApiError(error_code, error_msg)

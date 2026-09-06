@@ -6,7 +6,8 @@ Tools for creating, reading, updating, and deleting WordPress pages.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_page_id
+from ..models import validate_positive_id
+from .formatting import add_embedded_author, format_common, get_rendered
 
 
 async def list_pages(
@@ -73,7 +74,7 @@ async def get_page(page_id: int) -> dict[str, Any]:
         Full page details including content
     """
     client = get_client()
-    page_id = validate_page_id(page_id)
+    page_id = validate_positive_id(page_id)
 
     response = await client.get(f"/pages/{page_id}", params={"_embed": "true"})
 
@@ -175,30 +176,24 @@ async def update_page(
         Updated page details
     """
     client = get_client()
-    page_id = validate_page_id(page_id)
+    page_id = validate_positive_id(page_id)
 
-    page_data: dict[str, Any] = {}
-
-    if title is not None:
-        page_data["title"] = title
-    if content is not None:
-        page_data["content"] = content
-    if status is not None:
-        page_data["status"] = status
-    if excerpt is not None:
-        page_data["excerpt"] = excerpt
-    if slug is not None:
-        page_data["slug"] = slug
-    if parent is not None:
-        page_data["parent"] = parent
-    if menu_order is not None:
-        page_data["menu_order"] = menu_order
-    if template is not None:
-        page_data["template"] = template
-    if featured_media is not None:
-        page_data["featured_media"] = featured_media
-    if date is not None:
-        page_data["date"] = date
+    page_data: dict[str, Any] = {
+        field: value
+        for field, value in (
+            ("title", title),
+            ("content", content),
+            ("status", status),
+            ("excerpt", excerpt),
+            ("slug", slug),
+            ("parent", parent),
+            ("menu_order", menu_order),
+            ("template", template),
+            ("featured_media", featured_media),
+            ("date", date),
+        )
+        if value is not None
+    }
 
     if not page_data:
         return {"error": "No fields to update"}
@@ -222,7 +217,7 @@ async def delete_page(page_id: int, force: bool = False) -> dict[str, Any]:
         Deletion confirmation
     """
     client = get_client()
-    page_id = validate_page_id(page_id)
+    page_id = validate_positive_id(page_id)
 
     params = {"force": str(force).lower()}
     response = await client.delete(f"/pages/{page_id}", params=params)
@@ -247,61 +242,35 @@ async def list_page_revisions(page_id: int) -> dict[str, Any]:
         List of revisions
     """
     client = get_client()
-    page_id = validate_page_id(page_id)
+    page_id = validate_positive_id(page_id)
 
     response = await client.get(f"/pages/{page_id}/revisions")
 
     revisions = []
     if isinstance(response, list):
         for rev in response:
-            revisions.append({
-                "id": rev.get("id"),
-                "author": rev.get("author"),
-                "date": rev.get("date"),
-                "modified": rev.get("modified"),
-                "title": _get_rendered(rev.get("title")),
-            })
+            revisions.append(
+                {
+                    "id": rev.get("id"),
+                    "author": rev.get("author"),
+                    "date": rev.get("date"),
+                    "modified": rev.get("modified"),
+                    "title": get_rendered(rev.get("title")),
+                }
+            )
 
     return {"revisions": revisions, "page_id": page_id}
 
 
-def _get_rendered(field: dict[str, Any] | str | None) -> str:
-    """Extract rendered content from WordPress response field."""
-    if field is None:
-        return ""
-    if isinstance(field, str):
-        return field
-    if isinstance(field, dict):
-        rendered = field.get("rendered", "")
-        return str(rendered) if rendered else ""
-    return ""
-
-
 def _format_page(page: dict[str, Any], include_content: bool = False) -> dict[str, Any]:
     """Format a page response for cleaner output."""
-    formatted = {
-        "id": page.get("id"),
-        "title": _get_rendered(page.get("title")),
-        "slug": page.get("slug"),
-        "status": page.get("status"),
-        "date": page.get("date"),
-        "modified": page.get("modified"),
-        "link": page.get("link"),
-        "author": page.get("author"),
-        "excerpt": _get_rendered(page.get("excerpt")),
-        "parent": page.get("parent"),
-        "menu_order": page.get("menu_order"),
-        "template": page.get("template", ""),
-        "featured_media": page.get("featured_media"),
-    }
+    formatted = format_common(page)
+    formatted["parent"] = page.get("parent")
+    formatted["menu_order"] = page.get("menu_order")
+    formatted["template"] = page.get("template", "")
 
     if include_content:
-        formatted["content"] = _get_rendered(page.get("content"))
+        formatted["content"] = get_rendered(page.get("content"))
 
-    # Include embedded author info if available
-    embedded = page.get("_embedded", {})
-    if author_list := embedded.get("author"):
-        author = author_list[0]
-        formatted["author_name"] = author.get("name")
-
+    add_embedded_author(formatted, page)
     return formatted
