@@ -40,6 +40,16 @@ jobs:
           WORDPRESS_USERNAME: "test_user_for_ci"
           WORDPRESS_APP_PASSWORD: "test_password_for_ci"
 
+  gourmand:
+    name: Code Quality (Gourmand)
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/crunchtools/gourmand:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gourmand
+        run: gourmand --full .
+
   build-container:
     runs-on: ubuntu-latest
     steps:

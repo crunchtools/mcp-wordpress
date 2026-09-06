@@ -16,10 +16,27 @@ PAGE_STATUSES = frozenset({"publish", "future", "draft", "pending", "private"})
 COMMENT_STATUSES = frozenset({"approved", "hold", "spam", "trash"})
 
 # Valid post formats
-POST_FORMATS = frozenset({
-    "standard", "aside", "chat", "gallery", "link",
-    "image", "quote", "status", "video", "audio"
-})
+POST_FORMATS = frozenset(
+    {"standard", "aside", "chat", "gallery", "link", "image", "quote", "status", "video", "audio"}
+)
+
+
+MAX_TITLE = 500
+MAX_EXCERPT = 1000
+MAX_SLUG = 200
+MAX_COMMENT_AUTHOR = 200
+MAX_COMMENT_CONTENT = 2000
+MAX_ALT_TEXT = 500
+MAX_CAPTION = 10000
+
+
+def validate_post_format(post_format: str) -> str:
+    """Normalise a post format to lower case and check it is supported."""
+    lowered = post_format.lower()
+    if lowered not in POST_FORMATS:
+        allowed = ", ".join(sorted(POST_FORMATS))
+        raise ValueError(f"Invalid post format. Allowed: {allowed}")
+    return lowered
 
 
 def validate_positive_id(value: int) -> int:
@@ -29,55 +46,21 @@ def validate_positive_id(value: int) -> int:
     return value
 
 
-def validate_post_id(post_id: int) -> int:
-    """Validate a post ID is a positive integer."""
-    return validate_positive_id(post_id)
-
-
-def validate_page_id(page_id: int) -> int:
-    """Validate a page ID is a positive integer."""
-    return validate_positive_id(page_id)
-
-
-def validate_media_id(media_id: int) -> int:
-    """Validate a media ID is a positive integer."""
-    return validate_positive_id(media_id)
-
-
-def validate_comment_id(comment_id: int) -> int:
-    """Validate a comment ID is a positive integer."""
-    return validate_positive_id(comment_id)
-
-
 class PostInput(BaseModel):
     """Validated post input for creation."""
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str = Field(
-        ..., min_length=1, max_length=500, description="Post title"
-    )
-    content: str = Field(
-        ..., min_length=1, description="Post content (HTML or Markdown)"
-    )
+    title: str = Field(..., min_length=1, max_length=MAX_TITLE, description="Post title")
+    content: str = Field(..., min_length=1, description="Post content (HTML or Markdown)")
     status: Literal["publish", "future", "draft", "pending", "private"] = Field(
         default="draft", description="Post status"
     )
-    excerpt: str | None = Field(
-        default=None, max_length=1000, description="Post excerpt"
-    )
-    slug: str | None = Field(
-        default=None, max_length=200, description="Post slug for URL"
-    )
-    categories: list[int] | None = Field(
-        default=None, description="List of category IDs"
-    )
-    tags: list[int] | None = Field(
-        default=None, description="List of tag IDs"
-    )
-    featured_media: int | None = Field(
-        default=None, ge=0, description="Featured image media ID"
-    )
+    excerpt: str | None = Field(default=None, max_length=MAX_EXCERPT, description="Post excerpt")
+    slug: str | None = Field(default=None, max_length=MAX_SLUG, description="Post slug for URL")
+    categories: list[int] | None = Field(default=None, description="List of category IDs")
+    tags: list[int] | None = Field(default=None, description="List of tag IDs")
+    featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
     date: str | None = Field(
         default=None, description="Publication date (ISO 8601 format for scheduling)"
     )
@@ -88,13 +71,7 @@ class PostInput(BaseModel):
     @field_validator("format")
     @classmethod
     def validate_format(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        v_lower = v.lower()
-        if v_lower not in POST_FORMATS:
-            allowed = ", ".join(sorted(POST_FORMATS))
-            raise ValueError(f"Invalid post format. Allowed: {allowed}")
-        return v_lower
+        return None if v is None else validate_post_format(v)
 
 
 class PostUpdateInput(BaseModel):
@@ -103,46 +80,24 @@ class PostUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(
-        default=None, min_length=1, max_length=500, description="Post title"
+        default=None, min_length=1, max_length=MAX_TITLE, description="Post title"
     )
-    content: str | None = Field(
-        default=None, description="Post content"
-    )
+    content: str | None = Field(default=None, description="Post content")
     status: Literal["publish", "future", "draft", "pending", "private"] | None = Field(
         default=None, description="Post status"
     )
-    excerpt: str | None = Field(
-        default=None, max_length=1000, description="Post excerpt"
-    )
-    slug: str | None = Field(
-        default=None, max_length=200, description="Post slug"
-    )
-    categories: list[int] | None = Field(
-        default=None, description="List of category IDs"
-    )
-    tags: list[int] | None = Field(
-        default=None, description="List of tag IDs"
-    )
-    featured_media: int | None = Field(
-        default=None, ge=0, description="Featured image media ID"
-    )
-    date: str | None = Field(
-        default=None, description="Publication date (ISO 8601)"
-    )
-    format: str | None = Field(
-        default=None, description="Post format"
-    )
+    excerpt: str | None = Field(default=None, max_length=MAX_EXCERPT, description="Post excerpt")
+    slug: str | None = Field(default=None, max_length=MAX_SLUG, description="Post slug")
+    categories: list[int] | None = Field(default=None, description="List of category IDs")
+    tags: list[int] | None = Field(default=None, description="List of tag IDs")
+    featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
+    date: str | None = Field(default=None, description="Publication date (ISO 8601)")
+    format: str | None = Field(default=None, description="Post format")
 
     @field_validator("format")
     @classmethod
     def validate_format(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        v_lower = v.lower()
-        if v_lower not in POST_FORMATS:
-            allowed = ", ".join(sorted(POST_FORMATS))
-            raise ValueError(f"Invalid post format. Allowed: {allowed}")
-        return v_lower
+        return None if v is None else validate_post_format(v)
 
 
 class PageInput(BaseModel):
@@ -150,36 +105,18 @@ class PageInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str = Field(
-        ..., min_length=1, max_length=500, description="Page title"
-    )
-    content: str = Field(
-        ..., min_length=1, description="Page content (HTML or Markdown)"
-    )
+    title: str = Field(..., min_length=1, max_length=MAX_TITLE, description="Page title")
+    content: str = Field(..., min_length=1, description="Page content (HTML or Markdown)")
     status: Literal["publish", "future", "draft", "pending", "private"] = Field(
         default="draft", description="Page status"
     )
-    excerpt: str | None = Field(
-        default=None, max_length=1000, description="Page excerpt"
-    )
-    slug: str | None = Field(
-        default=None, max_length=200, description="Page slug for URL"
-    )
-    parent: int | None = Field(
-        default=None, ge=0, description="Parent page ID"
-    )
-    menu_order: int | None = Field(
-        default=None, ge=0, description="Menu order"
-    )
-    template: str | None = Field(
-        default=None, max_length=200, description="Page template"
-    )
-    featured_media: int | None = Field(
-        default=None, ge=0, description="Featured image media ID"
-    )
-    date: str | None = Field(
-        default=None, description="Publication date (ISO 8601 format)"
-    )
+    excerpt: str | None = Field(default=None, max_length=MAX_EXCERPT, description="Page excerpt")
+    slug: str | None = Field(default=None, max_length=MAX_SLUG, description="Page slug for URL")
+    parent: int | None = Field(default=None, ge=0, description="Parent page ID")
+    menu_order: int | None = Field(default=None, ge=0, description="Menu order")
+    template: str | None = Field(default=None, max_length=MAX_SLUG, description="Page template")
+    featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
+    date: str | None = Field(default=None, description="Publication date (ISO 8601 format)")
 
 
 class PageUpdateInput(BaseModel):
@@ -188,35 +125,19 @@ class PageUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(
-        default=None, min_length=1, max_length=500, description="Page title"
+        default=None, min_length=1, max_length=MAX_TITLE, description="Page title"
     )
-    content: str | None = Field(
-        default=None, description="Page content"
-    )
+    content: str | None = Field(default=None, description="Page content")
     status: Literal["publish", "future", "draft", "pending", "private"] | None = Field(
         default=None, description="Page status"
     )
-    excerpt: str | None = Field(
-        default=None, max_length=1000, description="Page excerpt"
-    )
-    slug: str | None = Field(
-        default=None, max_length=200, description="Page slug"
-    )
-    parent: int | None = Field(
-        default=None, ge=0, description="Parent page ID"
-    )
-    menu_order: int | None = Field(
-        default=None, ge=0, description="Menu order"
-    )
-    template: str | None = Field(
-        default=None, max_length=200, description="Page template"
-    )
-    featured_media: int | None = Field(
-        default=None, ge=0, description="Featured image media ID"
-    )
-    date: str | None = Field(
-        default=None, description="Publication date (ISO 8601)"
-    )
+    excerpt: str | None = Field(default=None, max_length=MAX_EXCERPT, description="Page excerpt")
+    slug: str | None = Field(default=None, max_length=MAX_SLUG, description="Page slug")
+    parent: int | None = Field(default=None, ge=0, description="Parent page ID")
+    menu_order: int | None = Field(default=None, ge=0, description="Menu order")
+    template: str | None = Field(default=None, max_length=MAX_SLUG, description="Page template")
+    featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
+    date: str | None = Field(default=None, description="Publication date (ISO 8601)")
 
 
 class MediaInput(BaseModel):
@@ -224,18 +145,14 @@ class MediaInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str | None = Field(
-        default=None, max_length=500, description="Media title"
-    )
+    title: str | None = Field(default=None, max_length=MAX_TITLE, description="Media title")
     alt_text: str | None = Field(
-        default=None, max_length=500, description="Alt text for accessibility"
+        default=None, max_length=MAX_TITLE, description="Alt text for accessibility"
     )
     caption: str | None = Field(
-        default=None, max_length=2000, description="Media caption"
+        default=None, max_length=MAX_COMMENT_CONTENT, description="Media caption"
     )
-    description: str | None = Field(
-        default=None, description="Media description"
-    )
+    description: str | None = Field(default=None, description="Media description")
 
 
 class MediaUpdateInput(BaseModel):
@@ -243,18 +160,10 @@ class MediaUpdateInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str | None = Field(
-        default=None, max_length=500, description="Media title"
-    )
-    alt_text: str | None = Field(
-        default=None, max_length=500, description="Alt text"
-    )
-    caption: str | None = Field(
-        default=None, max_length=2000, description="Caption"
-    )
-    description: str | None = Field(
-        default=None, description="Description"
-    )
+    title: str | None = Field(default=None, max_length=MAX_TITLE, description="Media title")
+    alt_text: str | None = Field(default=None, max_length=MAX_TITLE, description="Alt text")
+    caption: str | None = Field(default=None, max_length=MAX_COMMENT_CONTENT, description="Caption")
+    description: str | None = Field(default=None, description="Description")
 
 
 class CommentInput(BaseModel):
@@ -262,20 +171,12 @@ class CommentInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    post: int = Field(
-        ..., ge=1, description="Post ID to comment on"
-    )
-    content: str = Field(
-        ..., min_length=1, max_length=10000, description="Comment content"
-    )
-    parent: int | None = Field(
-        default=None, ge=0, description="Parent comment ID for replies"
-    )
-    author_name: str | None = Field(
-        default=None, max_length=100, description="Comment author name"
-    )
+    post: int = Field(..., ge=1, description="Post ID to comment on")
+    content: str = Field(..., min_length=1, max_length=MAX_CAPTION, description="Comment content")
+    parent: int | None = Field(default=None, ge=0, description="Parent comment ID for replies")
+    author_name: str | None = Field(default=None, max_length=100, description="Comment author name")
     author_email: str | None = Field(
-        default=None, max_length=200, description="Comment author email"
+        default=None, max_length=MAX_SLUG, description="Comment author email"
     )
 
 
@@ -285,7 +186,7 @@ class CommentUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     content: str | None = Field(
-        default=None, min_length=1, max_length=10000, description="Comment content"
+        default=None, min_length=1, max_length=MAX_CAPTION, description="Comment content"
     )
     status: Literal["approved", "hold", "spam", "trash"] | None = Field(
         default=None, description="Comment status"

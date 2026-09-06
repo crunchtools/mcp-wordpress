@@ -30,3 +30,23 @@ justification = "MAX_UPLOAD_SIZE (50MB) is a standard file upload safety limit"
 check = "primitive_obsession"
 path = "tests/conftest.py"
 justification = "HTTP status code 200 and wp.example.com URL are standard test fixture patterns"
+
+[[exceptions]]
+check = "lint_suppression"
+path = "tests/test_validation.py"
+justification = "Three `# type: ignore[arg-type]` that are the point of their tests: each passes a value the Literal type forbids, to prove the model rejects it at runtime. Without the suppression the test cannot be written."
+
+[[exceptions]]
+check = "copy_paste_detection"
+path = "src/mcp_wordpress_crunchtools/client.py"
+justification = "get_client and get_config are both the four-line lazy-singleton accessor. The duplication is the idiom; hiding it behind a generic obscures which global is being initialised."
+
+[[exceptions]]
+check = "copy_paste_detection"
+path = "src/mcp_wordpress_crunchtools/tools/pages.py"
+justification = "The nine shared fields of _format_post and _format_page already moved into format_common(). What is left is four lines each: call format_common, set the two or three type-specific keys, attach the embedded author, return. That shape is the point, not duplication to remove."
+
+[[exceptions]]
+check = "single_use_helpers"
+path = "src/mcp_wordpress_crunchtools/client.py"
+justification = "_not_found_error exists because inlining it puts _handle_error_response back over the C901 complexity limit this PR turned on. Two checks disagree here; the smaller, named, table-driven lookup is the better code."

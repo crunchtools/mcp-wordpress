@@ -8,7 +8,9 @@ import os
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_media_id
+from ..errors import UserError
+from ..models import validate_positive_id
+from .formatting import get_rendered
 
 # Maximum upload size (50MB)
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024
@@ -77,7 +79,7 @@ async def get_media(media_id: int) -> dict[str, Any]:
         Media item details
     """
     client = get_client()
-    media_id = validate_media_id(media_id)
+    media_id = validate_positive_id(media_id)
 
     response = await client.get(f"/media/{media_id}")
 
@@ -199,7 +201,7 @@ async def update_media(
         Updated media item details
     """
     client = get_client()
-    media_id = validate_media_id(media_id)
+    media_id = validate_positive_id(media_id)
 
     media_data: dict[str, Any] = {}
 
@@ -223,7 +225,7 @@ async def update_media(
     return {"error": "Unexpected response format"}
 
 
-async def delete_media(media_id: int, force: bool = True) -> dict[str, Any]:  # noqa: ARG001
+async def delete_media(media_id: int, force: bool = True) -> dict[str, Any]:
     """Delete a media item.
 
     Args:
@@ -233,10 +235,15 @@ async def delete_media(media_id: int, force: bool = True) -> dict[str, Any]:  # 
     Returns:
         Deletion confirmation
     """
-    client = get_client()
-    media_id = validate_media_id(media_id)
+    if not force:
+        raise UserError(
+            "WordPress cannot move media to the trash. Pass force=True to delete "
+            "permanently, or leave the item in place."
+        )
 
-    # Media deletion requires force=true
+    client = get_client()
+    media_id = validate_positive_id(media_id)
+
     params = {"force": "true"}
     response = await client.delete(f"/media/{media_id}", params=params)
 
@@ -261,7 +268,7 @@ async def get_media_url(media_id: int, size: str = "full") -> dict[str, Any]:
         Media URL information
     """
     client = get_client()
-    media_id = validate_media_id(media_id)
+    media_id = validate_positive_id(media_id)
 
     response = await client.get(f"/media/{media_id}")
 
@@ -288,23 +295,11 @@ async def get_media_url(media_id: int, size: str = "full") -> dict[str, Any]:
     return {"error": "Unexpected response format"}
 
 
-def _get_rendered(field: dict[str, Any] | str | None) -> str:
-    """Extract rendered content from WordPress response field."""
-    if field is None:
-        return ""
-    if isinstance(field, str):
-        return field
-    if isinstance(field, dict):
-        rendered = field.get("rendered", "")
-        return str(rendered) if rendered else ""
-    return ""
-
-
 def _format_media(media: dict[str, Any], include_details: bool = False) -> dict[str, Any]:
     """Format a media response for cleaner output."""
     formatted = {
         "id": media.get("id"),
-        "title": _get_rendered(media.get("title")),
+        "title": get_rendered(media.get("title")),
         "slug": media.get("slug"),
         "date": media.get("date"),
         "modified": media.get("modified"),
@@ -316,8 +311,8 @@ def _format_media(media: dict[str, Any], include_details: bool = False) -> dict[
     }
 
     if include_details:
-        formatted["caption"] = _get_rendered(media.get("caption"))
-        formatted["description"] = _get_rendered(media.get("description"))
+        formatted["caption"] = get_rendered(media.get("caption"))
+        formatted["description"] = get_rendered(media.get("description"))
 
         # Include size information for images
         media_details = media.get("media_details", {})

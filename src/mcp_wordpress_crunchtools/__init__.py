@@ -29,13 +29,14 @@ Example with Claude Code:
 
 import argparse
 import os
+import tempfile
 
 from .server import mcp
 
 __version__ = "0.5.0"
 __all__ = ["main", "mcp"]
 
-DEFAULT_UPLOAD_DIR = "/tmp/mcp-uploads"  # noqa: S108 — intentional container mount path
+DEFAULT_UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "mcp-uploads")
 
 
 def main() -> None:
