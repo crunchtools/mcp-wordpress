@@ -102,9 +102,11 @@ def _read_upload_file(
         return ("file_path must be an absolute path", b"", "", "")
     if not os.path.isfile(file_path):
         return (
-            f"File not found: {file_path}. If running as a container, place files in "
-            "the host upload directory (default: ~/.local/share/mcp-uploads-downloads/) "
-            "which is mounted to /tmp/mcp-uploads/ inside the container.",
+            (
+                f"File not found: {file_path}. If running as a container, place files in "
+                "the host upload directory (default: ~/.local/share/mcp-uploads-downloads/) "
+                "which is mounted to /tmp/mcp-uploads/ inside the container."
+            ),
             b"",
             "",
             "",
