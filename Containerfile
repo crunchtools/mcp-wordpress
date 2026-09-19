@@ -21,7 +21,17 @@
 #     mcp-wordpress-crunchtools \
 #     --transport streamable-http --host 0.0.0.0
 
-# Use Hummingbird Python image (Red Hat UBI-based with Python pre-installed)
+# Stage 1: Builder (has a shell, dnf and build tools)
+FROM quay.io/hummingbird/python:latest-builder AS builder
+USER 0
+WORKDIR /app
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN pip install --no-cache-dir .
+
+# Stage 2: Runtime (distroless -- no shell, no package manager)
 FROM quay.io/hummingbird/python:latest
 
 # Labels for container metadata
@@ -37,21 +47,14 @@ LABEL name="mcp-wordpress-crunchtools" \
       org.opencontainers.image.description="Secure MCP server for WordPress content management" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
-# Set working directory
 WORKDIR /app
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY src/ ./src/
+COPY --from=builder /app/venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
 
-# Install the package and dependencies
-RUN pip install --no-cache-dir .
 
-# Verify installation
-RUN python -c "from mcp_wordpress_crunchtools import main; print('Installation verified')"
-
-# Create upload directory so server works with or without host volume mount
-RUN mkdir -p /tmp/mcp-uploads && chmod 777 /tmp/mcp-uploads
+# Verify the install. Exec form: this stage has no /bin/sh for RUN's shell form.
+RUN ["python3", "-c", "from mcp_wordpress_crunchtools import main; print('Installation verified')"]
 
 # Default: stdio transport (use -i with podman run)
 # HTTP:    --transport streamable-http (use -d -p 8000:8000 with podman run)
