@@ -203,3 +203,72 @@ class TestCommentUpdateInput:
         """Test invalid status."""
         with pytest.raises(ValidationError):
             CommentUpdateInput(status="invalid")  # type: ignore[arg-type]
+
+
+class TestWritePathValidation:
+    """The models in models.py are wired into the write tools, not just defined.
+
+    These eight models were fully unit-tested from the day they were written
+    and instantiated by nothing: create_post(), create_page(), upload_media(),
+    create_comment() and their update counterparts passed raw arguments
+    straight to the WordPress API. models.py's own docstring claimed "All tool
+    inputs are validated through these models to prevent injection attacks",
+    which was false. Gourmand's DC004-dead_structs check is what surfaced it.
+
+    Each test below calls the real tool and asserts it rejects the input before
+    any HTTP request is made, which is the behaviour that was missing.
+    """
+
+    async def test_create_post_rejects_empty_title(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_post
+
+        with pytest.raises(ValidationError):
+            await create_post(title="", content="body")
+
+    async def test_create_post_rejects_oversized_title(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_post
+
+        with pytest.raises(ValidationError):
+            await create_post(title="x" * 501, content="body")
+
+    async def test_create_post_rejects_unknown_status(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_post
+
+        with pytest.raises(ValidationError):
+            await create_post(title="t", content="body", status="not-a-status")
+
+    async def test_update_post_rejects_unknown_status(self) -> None:
+        from mcp_wordpress_crunchtools.tools import update_post
+
+        with pytest.raises(ValidationError):
+            await update_post(post_id=1, status="not-a-status")
+
+    async def test_create_page_rejects_oversized_slug(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_page
+
+        with pytest.raises(ValidationError):
+            await create_page(title="t", content="body", slug="s" * 201)
+
+    async def test_create_comment_rejects_oversized_content(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_comment
+
+        with pytest.raises(ValidationError):
+            await create_comment(post=1, content="c" * 10001)
+
+    async def test_create_comment_rejects_nonpositive_post_id(self) -> None:
+        from mcp_wordpress_crunchtools.tools import create_comment
+
+        with pytest.raises(ValidationError):
+            await create_comment(post=0, content="hello")
+
+    async def test_update_comment_rejects_unknown_status(self) -> None:
+        from mcp_wordpress_crunchtools.tools import update_comment
+
+        with pytest.raises(ValidationError):
+            await update_comment(comment_id=1, status="not-a-status")
+
+    async def test_update_media_rejects_oversized_alt_text(self) -> None:
+        from mcp_wordpress_crunchtools.tools import update_media
+
+        with pytest.raises(ValidationError):
+            await update_media(media_id=1, alt_text="a" * 501)

@@ -109,28 +109,6 @@ path = "src/mcp_wordpress_crunchtools/server.py"
 justification = "2024 appears only in a docstring example date illustrating the accepted ISO-8601 format for post scheduling, not a real timestamp used in logic"
 classification = "by_design"
 
-# DC004: eight Pydantic input models (PostInput, PostUpdateInput,
-# PageInput, PageUpdateInput, MediaInput, MediaUpdateInput, CommentInput,
-# CommentUpdateInput) are fully defined and unit-tested in
-# tests/test_validation.py, but NOT wired into the corresponding tool
-# functions in tools/posts.py, tools/pages.py, tools/media.py, and
-# tools/comments.py. create_post() (and the update/create paths for
-# pages/media/comments), for example, take raw args and pass them straight
-# to the WordPress API with no length limits, no status allowlist check,
-# and no post_format validation -- exactly what models.py's own docstring
-# claims is enforced ("All tool inputs are validated through these models
-# to prevent injection attacks and ensure data integrity"). This is real,
-# unfinished work, not a false positive or an architectural choice: the
-# validation layer exists and is correct, but wiring it into ~10 tool
-# functions changes runtime behavior (some previously-accepted inputs
-# would now be rejected) and needs its own reviewed change, not a
-# gourmand-migration PR. Classified fix_planned, not by_design -- counts
-# against score until wired in. Flagged to the team lead separately.
-[[exceptions]]
-check = "dead_structs"
-path = "src/mcp_wordpress_crunchtools/models.py"
-justification = "Eight Pydantic input models are tested in tests/test_validation.py but never wired into their corresponding tool functions (posts/pages/media/comments create and update paths take raw unvalidated args); real, unfinished validation work, not a false positive"
-classification = "fix_planned"
 
 # Manifest lint suppression on pyproject.toml, audited with
 # `ruff check --select <RULE>` and real hit counts recorded (see
