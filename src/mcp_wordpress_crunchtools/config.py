@@ -32,11 +32,9 @@ class Config:
         url = os.environ.get("WORDPRESS_URL")
         if not url:
             raise ConfigurationError(
-                "WORDPRESS_URL environment variable required. "
-                "Example: https://example.com"
+                "WORDPRESS_URL environment variable required. Example: https://example.com"
             )
 
-        # Validate and normalize URL
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             raise ConfigurationError(
@@ -53,9 +51,7 @@ class Config:
         # WordPress username
         username = os.environ.get("WORDPRESS_USERNAME")
         if not username:
-            raise ConfigurationError(
-                "WORDPRESS_USERNAME environment variable required."
-            )
+            raise ConfigurationError("WORDPRESS_USERNAME environment variable required.")
         self._username = username
 
         # WordPress application password

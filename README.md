@@ -6,7 +6,7 @@ A secure MCP (Model Context Protocol) server for WordPress content management. D
 
 This MCP server is designed to be:
 
-- **Secure by default** - Comprehensive input validation, credential protection, and SSRF prevention
+- **Secure by default** - Input validation, credential protection, and SSRF prevention
 - **No third-party services** - Runs locally via stdio, your credentials never leave your machine
 - **Cross-platform** - Works on Linux, macOS, and Windows
 - **Automatically updated** - GitHub Actions monitor for CVEs and update dependencies
