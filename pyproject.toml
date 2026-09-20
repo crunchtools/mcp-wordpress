@@ -49,25 +49,46 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "S", "B", "C4", "C901", "DTZ", "T10", "ISC", "PIE", "PT", "RET", "SIM", "TID", "TCH", "ARG", "PLC", "PLE", "PLR", "PLW", "TRY", "RUF"]
 ignore = [
-    "S101",     # assert allowed in tests
-    "TRY003",   # long exception messages ok
-    "PLR0913",  # many arguments ok for tools
-    "PLR0917",  # ditto, positional: MCP tool signatures mirror the wire API
-    "PLR2004",  # magic numbers ok (HTTP status codes)
-    "PLW0603",  # global statement ok for singletons
-    "PIE790",   # pass in empty classes ok
-    "PLC0415",  # imports in tests ok
-    "S105",     # hardcoded passwords in tests ok
-    "TID252",   # relative imports in package ok
-    "RUF022",   # __all__ sorted by category, not alphabetically
+    # TRY003: 9 hits across client.py, config.py, models.py, media.py --
+    # descriptive one-off messages on ConfigurationError/ValueError raises,
+    # confirmed genuinely spread, not concentrated in one file.
+    "TRY003",
+    # PLR0913/PLR0917: 17 hits across 6 files (client.py, server.py x8,
+    # comments.py, media.py, pages.py x3, posts.py x3). Plausibly MCP tool
+    # signatures mirroring the wire API, but NOT reviewed function-by-
+    # function -- models.py defines Input models for several of these
+    # (PostInput, PageInput, MediaInput, CommentInput) that are validated
+    # and tested but not wired into the tool functions (see DC004 exception
+    # in gourmand-exceptions.toml), so this breadth may be masking
+    # incomplete integration rather than a uniform design decision.
+    # Real debt pending review, not stamped by_design.
+    "PLR0913",
+    "PLR0917",
+    # TID252: 11 hits across 5 files under tools/. Audited with
+    # `ruff check --select TID252` -- all the same `from .. import` /
+    # `from ..module import X` idiom reaching the parent package.
+    # Confirmed uniform.
+    "TID252",
 ]
 
 [tool.ruff.lint.pylint]
 max-branches = 10
 max-statements = 50
 
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "PLC0415", "PLR2004"]
+"tests/*" = ["S101", "S105", "PLC0415", "PLR2004"]
+# PLR2004: 4 hits, HTTP status codes in client.py's error dispatch.
+"src/mcp_wordpress_crunchtools/client.py" = ["PLR2004", "PLW0603"]
+# PLW0603: 1 hit, the module-global singleton accessor idiom (get_config).
+"src/mcp_wordpress_crunchtools/config.py" = ["PLW0603"]
+# PIE790: 3 hits, empty exception-class bodies (docstring-only subclasses).
+"src/mcp_wordpress_crunchtools/errors.py" = ["PIE790"]
+# RUF022: 1 hit, the project's only __all__, already grouped by tool
+# category (Site/Posts/Pages/Media/Comments) with comment headers.
+"src/mcp_wordpress_crunchtools/tools/__init__.py" = ["RUF022"]
 
 [tool.mypy]
 python_version = "3.10"

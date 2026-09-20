@@ -1,7 +1,17 @@
 """Pydantic models for input validation.
 
-All tool inputs are validated through these models to prevent injection attacks
-and ensure data integrity before making API calls.
+NOT CURRENTLY WIRED IN. These models are defined and unit-tested, but no tool
+function instantiates them -- create_post(), create_page(), upload_media() and
+their update counterparts take raw arguments and call the WordPress API
+directly. Nothing here enforces the status allowlist or the length bounds
+below.
+
+This docstring previously claimed "All tool inputs are validated through these
+models to prevent injection attacks", which was false and is the more dangerous
+half of the bug: a reader auditing this server would have taken the claim at
+face value. Tracked as a fix_planned exception against
+DC004-dead_structs (RT #1482); wiring them in changes runtime behaviour across
+eight write operations and belongs in its own reviewed change.
 """
 
 from typing import Literal

@@ -1,5 +1,7 @@
 """Mocked tool tests for all 30 WordPress tools."""
 
+import os
+
 import pytest
 
 from mcp_wordpress_crunchtools.errors import (
@@ -107,9 +109,7 @@ def test_imports() -> None:
         assert callable(func)
 
 
-# =============================================================================
 # Error Hierarchy Tests (preserved from original)
-# =============================================================================
 
 
 class TestErrorHierarchy:
@@ -184,8 +184,6 @@ class TestErrorMessages:
         assert "retry" in str(error).lower()
 
     def test_wordpress_api_error_sanitizes_password(self) -> None:
-        import os
-
         os.environ["WORDPRESS_APP_PASSWORD"] = "secret_password_123"
         error = WordPressApiError("auth_error", "Failed with secret_password_123")
         error_msg = str(error)
@@ -214,9 +212,7 @@ class TestValidationError:
         assert "Invalid input format" in str(error)
 
 
-# =============================================================================
 # Mocked API Tests — Site Tools
-# =============================================================================
 
 
 class TestSiteTools:
@@ -253,9 +249,7 @@ class TestSiteTools:
             assert result["user_id"] == 1
 
 
-# =============================================================================
 # Mocked API Tests — Post Tools
-# =============================================================================
 
 
 class TestPostTools:
@@ -264,11 +258,21 @@ class TestPostTools:
     @pytest.mark.asyncio
     async def test_list_posts(self) -> None:
         posts = [
-            {"id": 1, "title": {"rendered": "Hello World"}, "status": "publish",
-             "slug": "hello-world", "date": "2026-01-01", "modified": "2026-01-01",
-             "link": "https://wp.example.com/hello-world", "author": 1,
-             "excerpt": {"rendered": "Welcome"}, "categories": [1], "tags": [],
-             "featured_media": 0, "format": "standard"},
+            {
+                "id": 1,
+                "title": {"rendered": "Hello World"},
+                "status": "publish",
+                "slug": "hello-world",
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "link": "https://wp.example.com/hello-world",
+                "author": 1,
+                "excerpt": {"rendered": "Welcome"},
+                "categories": [1],
+                "tags": [],
+                "featured_media": 0,
+                "format": "standard",
+            },
         ]
         resp = _mock_wp_response(json_data=posts)
         async with _patch_wp_client(response=resp):
@@ -280,11 +284,22 @@ class TestPostTools:
 
     @pytest.mark.asyncio
     async def test_get_post(self) -> None:
-        post = {"id": 1, "title": {"rendered": "Test Post"}, "status": "publish",
-                "slug": "test-post", "date": "2026-01-01", "modified": "2026-01-01",
-                "link": "https://wp.example.com/test-post", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>Hello</p>"},
-                "categories": [], "tags": [], "featured_media": 0, "format": "standard"}
+        post = {
+            "id": 1,
+            "title": {"rendered": "Test Post"},
+            "status": "publish",
+            "slug": "test-post",
+            "date": "2026-01-01",
+            "modified": "2026-01-01",
+            "link": "https://wp.example.com/test-post",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>Hello</p>"},
+            "categories": [],
+            "tags": [],
+            "featured_media": 0,
+            "format": "standard",
+        }
         resp = _mock_wp_response(json_data=post)
         async with _patch_wp_client(response=resp):
             result = await get_post(1)
@@ -295,11 +310,21 @@ class TestPostTools:
     @pytest.mark.asyncio
     async def test_search_posts(self) -> None:
         posts = [
-            {"id": 5, "title": {"rendered": "Search Result"}, "status": "publish",
-             "slug": "search-result", "date": "2026-01-01", "modified": "2026-01-01",
-             "link": "https://wp.example.com/search-result", "author": 1,
-             "excerpt": {"rendered": ""}, "categories": [], "tags": [],
-             "featured_media": 0, "format": "standard"},
+            {
+                "id": 5,
+                "title": {"rendered": "Search Result"},
+                "status": "publish",
+                "slug": "search-result",
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "link": "https://wp.example.com/search-result",
+                "author": 1,
+                "excerpt": {"rendered": ""},
+                "categories": [],
+                "tags": [],
+                "featured_media": 0,
+                "format": "standard",
+            },
         ]
         resp = _mock_wp_response(json_data=posts)
         async with _patch_wp_client(response=resp):
@@ -309,11 +334,22 @@ class TestPostTools:
 
     @pytest.mark.asyncio
     async def test_create_post(self) -> None:
-        post = {"id": 10, "title": {"rendered": "New Post"}, "status": "draft",
-                "slug": "new-post", "date": "2026-01-01", "modified": "2026-01-01",
-                "link": "https://wp.example.com/?p=10", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>Content</p>"},
-                "categories": [], "tags": [], "featured_media": 0, "format": "standard"}
+        post = {
+            "id": 10,
+            "title": {"rendered": "New Post"},
+            "status": "draft",
+            "slug": "new-post",
+            "date": "2026-01-01",
+            "modified": "2026-01-01",
+            "link": "https://wp.example.com/?p=10",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>Content</p>"},
+            "categories": [],
+            "tags": [],
+            "featured_media": 0,
+            "format": "standard",
+        }
         resp = _mock_wp_response(json_data=post)
         async with _patch_wp_client(response=resp):
             result = await create_post("New Post", "Content")
@@ -323,11 +359,22 @@ class TestPostTools:
 
     @pytest.mark.asyncio
     async def test_update_post(self) -> None:
-        post = {"id": 1, "title": {"rendered": "Updated Title"}, "status": "publish",
-                "slug": "test-post", "date": "2026-01-01", "modified": "2026-01-02",
-                "link": "https://wp.example.com/test-post", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>Updated</p>"},
-                "categories": [], "tags": [], "featured_media": 0, "format": "standard"}
+        post = {
+            "id": 1,
+            "title": {"rendered": "Updated Title"},
+            "status": "publish",
+            "slug": "test-post",
+            "date": "2026-01-01",
+            "modified": "2026-01-02",
+            "link": "https://wp.example.com/test-post",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>Updated</p>"},
+            "categories": [],
+            "tags": [],
+            "featured_media": 0,
+            "format": "standard",
+        }
         resp = _mock_wp_response(json_data=post)
         async with _patch_wp_client(response=resp):
             result = await update_post(1, title="Updated Title")
@@ -345,10 +392,20 @@ class TestPostTools:
     @pytest.mark.asyncio
     async def test_list_revisions(self) -> None:
         revisions = [
-            {"id": 101, "author": 1, "date": "2026-01-01", "modified": "2026-01-01",
-             "title": {"rendered": "Rev 1"}},
-            {"id": 102, "author": 1, "date": "2026-01-02", "modified": "2026-01-02",
-             "title": {"rendered": "Rev 2"}},
+            {
+                "id": 101,
+                "author": 1,
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "title": {"rendered": "Rev 1"},
+            },
+            {
+                "id": 102,
+                "author": 1,
+                "date": "2026-01-02",
+                "modified": "2026-01-02",
+                "title": {"rendered": "Rev 2"},
+            },
         ]
         resp = _mock_wp_response(json_data=revisions)
         async with _patch_wp_client(response=resp):
@@ -358,10 +415,14 @@ class TestPostTools:
 
     @pytest.mark.asyncio
     async def test_get_revision(self) -> None:
-        revision = {"id": 101, "author": 1, "date": "2026-01-01",
-                     "title": {"rendered": "Original Title"},
-                     "content": {"rendered": "<p>Original content</p>"},
-                     "excerpt": {"rendered": ""}}
+        revision = {
+            "id": 101,
+            "author": 1,
+            "date": "2026-01-01",
+            "title": {"rendered": "Original Title"},
+            "content": {"rendered": "<p>Original content</p>"},
+            "excerpt": {"rendered": ""},
+        }
         resp = _mock_wp_response(json_data=revision)
         async with _patch_wp_client(response=resp):
             result = await get_revision(1, 101)
@@ -371,8 +432,14 @@ class TestPostTools:
     @pytest.mark.asyncio
     async def test_list_categories(self) -> None:
         categories = [
-            {"id": 1, "name": "Uncategorized", "slug": "uncategorized",
-             "description": "", "count": 5, "parent": 0},
+            {
+                "id": 1,
+                "name": "Uncategorized",
+                "slug": "uncategorized",
+                "description": "",
+                "count": 5,
+                "parent": 0,
+            },
         ]
         resp = _mock_wp_response(json_data=categories)
         async with _patch_wp_client(response=resp):
@@ -394,9 +461,7 @@ class TestPostTools:
             assert result["tags"][0]["name"] == "python"
 
 
-# =============================================================================
 # Mocked API Tests — Page Tools
-# =============================================================================
 
 
 class TestPageTools:
@@ -405,11 +470,21 @@ class TestPageTools:
     @pytest.mark.asyncio
     async def test_list_pages(self) -> None:
         pages = [
-            {"id": 2, "title": {"rendered": "About"}, "status": "publish",
-             "slug": "about", "date": "2026-01-01", "modified": "2026-01-01",
-             "link": "https://wp.example.com/about", "author": 1,
-             "excerpt": {"rendered": ""}, "parent": 0, "menu_order": 0,
-             "template": "", "featured_media": 0},
+            {
+                "id": 2,
+                "title": {"rendered": "About"},
+                "status": "publish",
+                "slug": "about",
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "link": "https://wp.example.com/about",
+                "author": 1,
+                "excerpt": {"rendered": ""},
+                "parent": 0,
+                "menu_order": 0,
+                "template": "",
+                "featured_media": 0,
+            },
         ]
         resp = _mock_wp_response(json_data=pages)
         async with _patch_wp_client(response=resp):
@@ -420,11 +495,22 @@ class TestPageTools:
 
     @pytest.mark.asyncio
     async def test_get_page(self) -> None:
-        page = {"id": 2, "title": {"rendered": "About"}, "status": "publish",
-                "slug": "about", "date": "2026-01-01", "modified": "2026-01-01",
-                "link": "https://wp.example.com/about", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>About us</p>"},
-                "parent": 0, "menu_order": 0, "template": "", "featured_media": 0}
+        page = {
+            "id": 2,
+            "title": {"rendered": "About"},
+            "status": "publish",
+            "slug": "about",
+            "date": "2026-01-01",
+            "modified": "2026-01-01",
+            "link": "https://wp.example.com/about",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>About us</p>"},
+            "parent": 0,
+            "menu_order": 0,
+            "template": "",
+            "featured_media": 0,
+        }
         resp = _mock_wp_response(json_data=page)
         async with _patch_wp_client(response=resp):
             result = await get_page(2)
@@ -434,11 +520,22 @@ class TestPageTools:
 
     @pytest.mark.asyncio
     async def test_create_page(self) -> None:
-        page = {"id": 20, "title": {"rendered": "New Page"}, "status": "draft",
-                "slug": "new-page", "date": "2026-01-01", "modified": "2026-01-01",
-                "link": "https://wp.example.com/?page_id=20", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>Page content</p>"},
-                "parent": 0, "menu_order": 0, "template": "", "featured_media": 0}
+        page = {
+            "id": 20,
+            "title": {"rendered": "New Page"},
+            "status": "draft",
+            "slug": "new-page",
+            "date": "2026-01-01",
+            "modified": "2026-01-01",
+            "link": "https://wp.example.com/?page_id=20",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>Page content</p>"},
+            "parent": 0,
+            "menu_order": 0,
+            "template": "",
+            "featured_media": 0,
+        }
         resp = _mock_wp_response(json_data=page)
         async with _patch_wp_client(response=resp):
             result = await create_page("New Page", "Page content")
@@ -447,11 +544,22 @@ class TestPageTools:
 
     @pytest.mark.asyncio
     async def test_update_page(self) -> None:
-        page = {"id": 2, "title": {"rendered": "Updated About"}, "status": "publish",
-                "slug": "about", "date": "2026-01-01", "modified": "2026-01-02",
-                "link": "https://wp.example.com/about", "author": 1,
-                "excerpt": {"rendered": ""}, "content": {"rendered": "<p>Updated</p>"},
-                "parent": 0, "menu_order": 0, "template": "", "featured_media": 0}
+        page = {
+            "id": 2,
+            "title": {"rendered": "Updated About"},
+            "status": "publish",
+            "slug": "about",
+            "date": "2026-01-01",
+            "modified": "2026-01-02",
+            "link": "https://wp.example.com/about",
+            "author": 1,
+            "excerpt": {"rendered": ""},
+            "content": {"rendered": "<p>Updated</p>"},
+            "parent": 0,
+            "menu_order": 0,
+            "template": "",
+            "featured_media": 0,
+        }
         resp = _mock_wp_response(json_data=page)
         async with _patch_wp_client(response=resp):
             result = await update_page(2, title="Updated About")
@@ -468,8 +576,13 @@ class TestPageTools:
     @pytest.mark.asyncio
     async def test_list_page_revisions(self) -> None:
         revisions = [
-            {"id": 201, "author": 1, "date": "2026-01-01", "modified": "2026-01-01",
-             "title": {"rendered": "About v1"}},
+            {
+                "id": 201,
+                "author": 1,
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "title": {"rendered": "About v1"},
+            },
         ]
         resp = _mock_wp_response(json_data=revisions)
         async with _patch_wp_client(response=resp):
@@ -478,9 +591,7 @@ class TestPageTools:
             assert len(result["revisions"]) == 1
 
 
-# =============================================================================
 # Mocked API Tests — Media Tools
-# =============================================================================
 
 
 class TestMediaTools:
@@ -489,11 +600,18 @@ class TestMediaTools:
     @pytest.mark.asyncio
     async def test_list_media(self) -> None:
         media = [
-            {"id": 50, "title": {"rendered": "logo.png"}, "slug": "logo",
-             "date": "2026-01-01", "modified": "2026-01-01",
-             "link": "https://wp.example.com/logo-png",
-             "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
-             "mime_type": "image/png", "media_type": "image", "alt_text": "Logo"},
+            {
+                "id": 50,
+                "title": {"rendered": "logo.png"},
+                "slug": "logo",
+                "date": "2026-01-01",
+                "modified": "2026-01-01",
+                "link": "https://wp.example.com/logo-png",
+                "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
+                "mime_type": "image/png",
+                "media_type": "image",
+                "alt_text": "Logo",
+            },
         ]
         resp = _mock_wp_response(json_data=media)
         async with _patch_wp_client(response=resp):
@@ -504,15 +622,32 @@ class TestMediaTools:
 
     @pytest.mark.asyncio
     async def test_get_media(self) -> None:
-        media = {"id": 50, "title": {"rendered": "logo.png"}, "slug": "logo",
-                 "date": "2026-01-01", "modified": "2026-01-01",
-                 "link": "https://wp.example.com/logo-png",
-                 "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
-                 "mime_type": "image/png", "media_type": "image", "alt_text": "Logo",
-                 "caption": {"rendered": ""}, "description": {"rendered": ""},
-                 "media_details": {"width": 200, "height": 100, "file": "logo.png",
-                                   "sizes": {"thumbnail": {"width": 150, "height": 75,
-                                             "source_url": "https://wp.example.com/wp-content/uploads/logo-150x75.png"}}}}
+        media = {
+            "id": 50,
+            "title": {"rendered": "logo.png"},
+            "slug": "logo",
+            "date": "2026-01-01",
+            "modified": "2026-01-01",
+            "link": "https://wp.example.com/logo-png",
+            "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
+            "mime_type": "image/png",
+            "media_type": "image",
+            "alt_text": "Logo",
+            "caption": {"rendered": ""},
+            "description": {"rendered": ""},
+            "media_details": {
+                "width": 200,
+                "height": 100,
+                "file": "logo.png",
+                "sizes": {
+                    "thumbnail": {
+                        "width": 150,
+                        "height": 75,
+                        "source_url": "https://wp.example.com/wp-content/uploads/logo-150x75.png",
+                    }
+                },
+            },
+        }
         resp = _mock_wp_response(json_data=media)
         async with _patch_wp_client(response=resp):
             result = await get_media(50)
@@ -522,13 +657,21 @@ class TestMediaTools:
 
     @pytest.mark.asyncio
     async def test_update_media(self) -> None:
-        media = {"id": 50, "title": {"rendered": "Updated Logo"}, "slug": "logo",
-                 "date": "2026-01-01", "modified": "2026-01-02",
-                 "link": "https://wp.example.com/logo-png",
-                 "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
-                 "mime_type": "image/png", "media_type": "image", "alt_text": "New alt",
-                 "caption": {"rendered": ""}, "description": {"rendered": ""},
-                 "media_details": {}}
+        media = {
+            "id": 50,
+            "title": {"rendered": "Updated Logo"},
+            "slug": "logo",
+            "date": "2026-01-01",
+            "modified": "2026-01-02",
+            "link": "https://wp.example.com/logo-png",
+            "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
+            "mime_type": "image/png",
+            "media_type": "image",
+            "alt_text": "New alt",
+            "caption": {"rendered": ""},
+            "description": {"rendered": ""},
+            "media_details": {},
+        }
         resp = _mock_wp_response(json_data=media)
         async with _patch_wp_client(response=resp):
             result = await update_media(50, title="Updated Logo", alt_text="New alt")
@@ -545,13 +688,19 @@ class TestMediaTools:
 
     @pytest.mark.asyncio
     async def test_get_media_url(self) -> None:
-        media = {"id": 50,
-                 "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
-                 "mime_type": "image/png",
-                 "media_details": {"sizes": {
-                     "thumbnail": {"source_url": "https://wp.example.com/wp-content/uploads/logo-150x150.png"},
-                     "full": {"source_url": "https://wp.example.com/wp-content/uploads/logo.png"},
-                 }}}
+        media = {
+            "id": 50,
+            "source_url": "https://wp.example.com/wp-content/uploads/logo.png",
+            "mime_type": "image/png",
+            "media_details": {
+                "sizes": {
+                    "thumbnail": {
+                        "source_url": "https://wp.example.com/wp-content/uploads/logo-150x150.png"
+                    },
+                    "full": {"source_url": "https://wp.example.com/wp-content/uploads/logo.png"},
+                }
+            },
+        }
         resp = _mock_wp_response(json_data=media)
         async with _patch_wp_client(response=resp):
             result = await get_media_url(50, size="thumbnail")
@@ -560,9 +709,7 @@ class TestMediaTools:
             assert "150x150" in result["url"]
 
 
-# =============================================================================
 # Mocked API Tests — Comment Tools
-# =============================================================================
 
 
 class TestCommentTools:
@@ -571,9 +718,16 @@ class TestCommentTools:
     @pytest.mark.asyncio
     async def test_list_comments(self) -> None:
         comments = [
-            {"id": 1, "post": 10, "parent": 0, "author": 0,
-             "author_name": "John", "date": "2026-01-01", "status": "approved",
-             "link": "https://wp.example.com/hello-world#comment-1"},
+            {
+                "id": 1,
+                "post": 10,
+                "parent": 0,
+                "author": 0,
+                "author_name": "John",
+                "date": "2026-01-01",
+                "status": "approved",
+                "link": "https://wp.example.com/hello-world#comment-1",
+            },
         ]
         resp = _mock_wp_response(json_data=comments)
         async with _patch_wp_client(response=resp):
@@ -584,11 +738,19 @@ class TestCommentTools:
 
     @pytest.mark.asyncio
     async def test_get_comment(self) -> None:
-        comment = {"id": 1, "post": 10, "parent": 0, "author": 0,
-                   "author_name": "John", "date": "2026-01-01", "status": "approved",
-                   "link": "https://wp.example.com/hello-world#comment-1",
-                   "content": {"rendered": "<p>Great post!</p>"},
-                   "author_email": "john@example.com", "author_url": ""}
+        comment = {
+            "id": 1,
+            "post": 10,
+            "parent": 0,
+            "author": 0,
+            "author_name": "John",
+            "date": "2026-01-01",
+            "status": "approved",
+            "link": "https://wp.example.com/hello-world#comment-1",
+            "content": {"rendered": "<p>Great post!</p>"},
+            "author_email": "john@example.com",
+            "author_url": "",
+        }
         resp = _mock_wp_response(json_data=comment)
         async with _patch_wp_client(response=resp):
             result = await get_comment(1)
@@ -598,11 +760,19 @@ class TestCommentTools:
 
     @pytest.mark.asyncio
     async def test_create_comment(self) -> None:
-        comment = {"id": 5, "post": 10, "parent": 0, "author": 1,
-                   "author_name": "admin", "date": "2026-01-01", "status": "approved",
-                   "link": "https://wp.example.com/hello-world#comment-5",
-                   "content": {"rendered": "<p>Nice work</p>"},
-                   "author_email": "", "author_url": ""}
+        comment = {
+            "id": 5,
+            "post": 10,
+            "parent": 0,
+            "author": 1,
+            "author_name": "admin",
+            "date": "2026-01-01",
+            "status": "approved",
+            "link": "https://wp.example.com/hello-world#comment-5",
+            "content": {"rendered": "<p>Nice work</p>"},
+            "author_email": "",
+            "author_url": "",
+        }
         resp = _mock_wp_response(json_data=comment)
         async with _patch_wp_client(response=resp):
             result = await create_comment(post=10, content="Nice work")
@@ -611,11 +781,19 @@ class TestCommentTools:
 
     @pytest.mark.asyncio
     async def test_update_comment(self) -> None:
-        comment = {"id": 1, "post": 10, "parent": 0, "author": 0,
-                   "author_name": "John", "date": "2026-01-01", "status": "hold",
-                   "link": "https://wp.example.com/hello-world#comment-1",
-                   "content": {"rendered": "<p>Updated</p>"},
-                   "author_email": "", "author_url": ""}
+        comment = {
+            "id": 1,
+            "post": 10,
+            "parent": 0,
+            "author": 0,
+            "author_name": "John",
+            "date": "2026-01-01",
+            "status": "hold",
+            "link": "https://wp.example.com/hello-world#comment-1",
+            "content": {"rendered": "<p>Updated</p>"},
+            "author_email": "",
+            "author_url": "",
+        }
         resp = _mock_wp_response(json_data=comment)
         async with _patch_wp_client(response=resp):
             result = await update_comment(1, content="Updated")
@@ -631,11 +809,19 @@ class TestCommentTools:
 
     @pytest.mark.asyncio
     async def test_moderate_comment(self) -> None:
-        comment = {"id": 1, "post": 10, "parent": 0, "author": 0,
-                   "author_name": "John", "date": "2026-01-01", "status": "approved",
-                   "link": "https://wp.example.com/hello-world#comment-1",
-                   "content": {"rendered": "<p>Great post!</p>"},
-                   "author_email": "", "author_url": ""}
+        comment = {
+            "id": 1,
+            "post": 10,
+            "parent": 0,
+            "author": 0,
+            "author_name": "John",
+            "date": "2026-01-01",
+            "status": "approved",
+            "link": "https://wp.example.com/hello-world#comment-1",
+            "content": {"rendered": "<p>Great post!</p>"},
+            "author_email": "",
+            "author_url": "",
+        }
         resp = _mock_wp_response(json_data=comment)
         async with _patch_wp_client(response=resp):
             result = await moderate_comment(1, "approve")
@@ -655,9 +841,7 @@ class TestCommentTools:
         assert action_to_status["approve"] == "approved"
 
 
-# =============================================================================
 # Mocked API Tests — Error Handling
-# =============================================================================
 
 
 class TestErrorHandling:
@@ -687,8 +871,11 @@ class TestErrorHandling:
     async def test_api_error_on_429(self) -> None:
         resp = _mock_wp_response(
             status_code=429,
-            json_data={"code": "rate_limit", "message": "Too many requests",
-                       "data": {"retry_after": 30}},
+            json_data={
+                "code": "rate_limit",
+                "message": "Too many requests",
+                "data": {"retry_after": 30},
+            },
         )
         async with _patch_wp_client(response=resp):
             with pytest.raises(RateLimitError, match="30"):

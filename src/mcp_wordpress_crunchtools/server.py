@@ -57,9 +57,7 @@ mcp = FastMCP(
 )
 
 
-# =============================================================================
 # Site Tools
-# =============================================================================
 
 
 @mcp.tool()
@@ -80,9 +78,7 @@ async def wordpress_test_connection() -> dict[str, Any]:
     return await test_connection()
 
 
-# =============================================================================
 # Post Tools
-# =============================================================================
 
 
 @mcp.tool()
@@ -325,9 +321,7 @@ async def wordpress_list_tags(
     return await list_tags(page=page, per_page=per_page, search=search)
 
 
-# =============================================================================
 # Page Tools
-# =============================================================================
 
 
 @mcp.tool()
@@ -496,9 +490,7 @@ async def wordpress_list_page_revisions(page_id: int) -> dict[str, Any]:
     return await list_page_revisions(page_id=page_id)
 
 
-# =============================================================================
 # Media Tools
-# =============================================================================
 
 
 @mcp.tool()
@@ -643,9 +635,7 @@ async def wordpress_get_media_url(media_id: int, size: str = "full") -> dict[str
     return await get_media_url(media_id=media_id, size=size)
 
 
-# =============================================================================
 # Comment Tools
-# =============================================================================
 
 
 @mcp.tool()
@@ -749,9 +739,7 @@ async def wordpress_update_comment(
 
 
 @mcp.tool()
-async def wordpress_delete_comment(
-    comment_id: int, force: bool = False
-) -> dict[str, Any]:
+async def wordpress_delete_comment(comment_id: int, force: bool = False) -> dict[str, Any]:
     """Delete or trash a WordPress comment.
 
     Args:

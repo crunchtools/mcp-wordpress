@@ -1,52 +1,158 @@
-# Gourmand Exceptions
-# Documented exceptions for files that legitimately trigger checks
-
-# Summary litter — CLAUDE.md is a standard Claude Code project instructions file
-[[exceptions]]
-check = "summary_litter"
-path = "CLAUDE.md"
-justification = "Claude Code project instructions for AI assistant orientation"
 
 # Primitive obsession — port 8000 is a standard default for HTTP servers
 [[exceptions]]
 check = "primitive_obsession"
 path = "src/mcp_wordpress_crunchtools/__init__.py"
 justification = "Port 8000 is a standard default for HTTP servers"
-
-# Primitive obsession — HTTP status codes and timeout are standard API patterns
-[[exceptions]]
-check = "primitive_obsession"
-path = "src/mcp_wordpress_crunchtools/client.py"
-justification = "HTTP status codes (401, 403, 404, 429) and timeout (30s) are standard well-known constants"
-
-# Primitive obsession — file size limits are standard upload validation
-[[exceptions]]
-check = "primitive_obsession"
-path = "src/mcp_wordpress_crunchtools/tools/media.py"
-justification = "MAX_UPLOAD_SIZE (50MB) is a standard file upload safety limit"
-
-# Primitive obsession — HTTP status code 200 and mock URL are standard test patterns
-[[exceptions]]
-check = "primitive_obsession"
-path = "tests/conftest.py"
-justification = "HTTP status code 200 and wp.example.com URL are standard test fixture patterns"
+classification = "by_design"
 
 [[exceptions]]
 check = "lint_suppression"
 path = "tests/test_validation.py"
 justification = "Three `# type: ignore[arg-type]` that are the point of their tests: each passes a value the Literal type forbids, to prove the model rejects it at runtime. Without the suppression the test cannot be written."
+classification = "by_design"
 
 [[exceptions]]
 check = "copy_paste_detection"
 path = "src/mcp_wordpress_crunchtools/client.py"
 justification = "get_client and get_config are both the four-line lazy-singleton accessor. The duplication is the idiom; hiding it behind a generic obscures which global is being initialised."
+classification = "by_design"
 
 [[exceptions]]
 check = "copy_paste_detection"
 path = "src/mcp_wordpress_crunchtools/tools/pages.py"
 justification = "The nine shared fields of _format_post and _format_page already moved into format_common(). What is left is four lines each: call format_common, set the two or three type-specific keys, attach the embedded author, return. That shape is the point, not duplication to remove."
+classification = "by_design"
 
 [[exceptions]]
 check = "single_use_helpers"
 path = "src/mcp_wordpress_crunchtools/client.py"
 justification = "_not_found_error exists because inlining it puts _handle_error_response back over the C901 complexity limit this PR turned on. Two checks disagree here; the smaller, named, table-driven lookup is the better code."
+classification = "by_design"
+
+# CH001-absolute_paths: all 11 flagged strings are false positives, either
+# WordPress REST API endpoint paths mistaken for filesystem paths, or
+# documentation/error-message prose describing the container upload-mount
+# convention (the actual default is computed portably via
+# tempfile.gettempdir() in __init__.py, not hardcoded).
+[[exceptions]]
+check = "absolute_paths"
+path = "src/mcp_wordpress_crunchtools/__init__.py"
+justification = "The tmp-directory reference is a docstring line describing MCP_UPLOAD_DIR's typical Linux default; the actual default is computed portably via tempfile.gettempdir(), not hardcoded"
+classification = "gourmand_bug"
+
+[[exceptions]]
+check = "absolute_paths"
+path = "src/mcp_wordpress_crunchtools/server.py"
+justification = "the tmp-uploads path appears only in docstring/instructions prose describing the container upload-mount convention (matches the portably-computed default), not a hardcoded filesystem path in logic"
+classification = "gourmand_bug"
+
+[[exceptions]]
+check = "absolute_paths"
+path = "src/mcp_wordpress_crunchtools/tools/media.py"
+justification = "the media endpoint path is a WordPress REST API path (client.get/patch/delete), not a filesystem path; the tmp-uploads path appears in an error message describing the container mount convention"
+classification = "gourmand_bug"
+
+[[exceptions]]
+check = "absolute_paths"
+path = "src/mcp_wordpress_crunchtools/tools/site.py"
+justification = "the users-me endpoint path is a WordPress REST API path (client.get), not a filesystem path"
+classification = "gourmand_bug"
+
+# EV004: catches Exception from the optional Settings API call, logs at
+# debug, and falls through to a fallback return with basic site info from
+# config -- a genuine RECOVER, not a log-only handler.
+[[exceptions]]
+check = "redundant_error_handling"
+path = "src/mcp_wordpress_crunchtools/tools/site.py"
+justification = "Handler recovers by falling through to a fallback return with basic site info from config when the (admin-only) Settings API call fails; not log-only"
+classification = "by_design"
+
+# All four vars documented in README.md and CLAUDE.md, verified against
+# source: WORDPRESS_URL/WORDPRESS_USERNAME/WORDPRESS_APP_PASSWORD are
+# required (config.py raises ConfigurationError if missing);
+# MCP_UPLOAD_DIR is optional, defaulting to tempfile.gettempdir() +
+# "mcp-uploads" (documented as the tmp-uploads path for the common Linux
+# container case, which matches). Not added to allowed_names, per upstream
+# guidance: this exception is the reviewed confirmation that each is
+# documented, not a silencing of the check.
+[[exceptions]]
+check = "hidden_env_config"
+path = "src/mcp_wordpress_crunchtools/__init__.py"
+justification = "MCP_UPLOAD_DIR is documented in README.md; its default (tempfile.gettempdir() + 'mcp-uploads') was verified against __init__.py's actual computation, not assumed from a docstring"
+classification = "by_design"
+
+[[exceptions]]
+check = "hidden_env_config"
+path = "src/mcp_wordpress_crunchtools/config.py"
+justification = "WORDPRESS_URL, WORDPRESS_USERNAME, and WORDPRESS_APP_PASSWORD are documented in README.md and CLAUDE.md's Environment Variables sections; required status verified against config.py's source"
+classification = "by_design"
+
+[[exceptions]]
+check = "hidden_env_config"
+path = "src/mcp_wordpress_crunchtools/errors.py"
+justification = "WORDPRESS_APP_PASSWORD is documented (see config.py exception above); referenced here only to redact it from error messages"
+classification = "by_design"
+
+[[exceptions]]
+check = "hidden_env_config"
+path = "tests/test_tools.py"
+justification = "WORDPRESS_APP_PASSWORD reference here is a test fixture for the password-redaction test, not user-facing configuration"
+classification = "by_design"
+
+# The flagged "2024" is a docstring example date (2024-12-25T10:00:00)
+# illustrating the accepted ISO-8601 format for the scheduling `date`
+# parameter, not a real timestamp used in logic.
+[[exceptions]]
+check = "hardcoded_years"
+path = "src/mcp_wordpress_crunchtools/server.py"
+justification = "2024 appears only in a docstring example date illustrating the accepted ISO-8601 format for post scheduling, not a real timestamp used in logic"
+classification = "by_design"
+
+# DC004: eight Pydantic input models (PostInput, PostUpdateInput,
+# PageInput, PageUpdateInput, MediaInput, MediaUpdateInput, CommentInput,
+# CommentUpdateInput) are fully defined and unit-tested in
+# tests/test_validation.py, but NOT wired into the corresponding tool
+# functions in tools/posts.py, tools/pages.py, tools/media.py, and
+# tools/comments.py. create_post() (and the update/create paths for
+# pages/media/comments), for example, take raw args and pass them straight
+# to the WordPress API with no length limits, no status allowlist check,
+# and no post_format validation -- exactly what models.py's own docstring
+# claims is enforced ("All tool inputs are validated through these models
+# to prevent injection attacks and ensure data integrity"). This is real,
+# unfinished work, not a false positive or an architectural choice: the
+# validation layer exists and is correct, but wiring it into ~10 tool
+# functions changes runtime behavior (some previously-accepted inputs
+# would now be rejected) and needs its own reviewed change, not a
+# gourmand-migration PR. Classified fix_planned, not by_design -- counts
+# against score until wired in. Flagged to the team lead separately.
+[[exceptions]]
+check = "dead_structs"
+path = "src/mcp_wordpress_crunchtools/models.py"
+justification = "Eight Pydantic input models are tested in tests/test_validation.py but never wired into their corresponding tool functions (posts/pages/media/comments create and update paths take raw unvalidated args); real, unfinished validation work, not a false positive"
+classification = "fix_planned"
+
+# Manifest lint suppression on pyproject.toml, audited with
+# `ruff check --select <RULE>` and real hit counts recorded (see
+# pyproject.toml comments):
+#   TRY003 (4 files / 9 hits): descriptive one-off error messages,
+#     confirmed genuinely spread, not masking anything -- reviewed.
+#   TID252 (5 files / 11 hits): uniform `from .. import` idiom -- reviewed.
+#   PLR2004 (client.py, 4 hits), PLW0603 (client.py + config.py, 2 hits),
+#     PIE790 (errors.py, 3 hits), RUF022 (tools/__init__.py, 1 hit),
+#     S101/S105/PLC0415/PLR2004 (tests/*): all narrow, single- or
+#     two-file, reviewed and scoped to confirmed sites.
+#   PLR0913/PLR0917 (6 files / 17 hits): NOT individually reviewed
+#     function-by-function -- models.py defines tested-but-unwired Input
+#     models (see the DC004/fix_planned exception above) for several of
+#     these same functions, so this breadth may be masking incomplete
+#     validation integration rather than a uniform "many args by design"
+#     decision. Real debt until reviewed or the DC004 wiring lands.
+# Classified accepted_bad_taste overall because PLR0913/PLR0917 remain
+# real, unreviewed debt in this file -- not stamped by_design just because
+# most of the other entries earned it.
+[[exceptions]]
+check = "manifest_lint_suppression"
+path = "pyproject.toml"
+justification = "PLR0913/PLR0917 remain global ignores not individually reviewed function-by-function (17 hits/6 files), and may be masking the same incomplete Input-model wiring flagged by the DC004 exception on models.py. All other entries were audited with `ruff check --select <RULE>` and scoped/confirmed; see pyproject.toml comments for real hit counts per rule"
+classification = "accepted_bad_taste"

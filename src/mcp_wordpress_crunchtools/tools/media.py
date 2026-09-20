@@ -154,7 +154,6 @@ async def upload_media(
     """
     client = get_client()
 
-    # Validate file path and read contents
     error, file_bytes, filename, content_type = _read_upload_file(file_path)
     if error:
         return {"error": error}
