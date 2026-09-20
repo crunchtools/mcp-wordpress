@@ -1,17 +1,18 @@
 """Pydantic models for input validation.
 
-NOT CURRENTLY WIRED IN. These models are defined and unit-tested, but no tool
-function instantiates them -- create_post(), create_page(), upload_media() and
-their update counterparts take raw arguments and call the WordPress API
-directly. Nothing here enforces the status allowlist or the length bounds
-below.
+Every write tool validates its arguments through the model named for it before
+any HTTP request is made: create_post/update_post, create_page/update_page,
+upload_media/update_media and create_comment/update_comment. Invalid input
+raises pydantic.ValidationError at the tool boundary rather than reaching the
+WordPress API.
 
-This docstring previously claimed "All tool inputs are validated through these
-models to prevent injection attacks", which was false and is the more dangerous
-half of the bug: a reader auditing this server would have taken the claim at
-face value. Tracked as a fix_planned exception against
-DC004-dead_structs (RT #1482); wiring them in changes runtime behaviour across
-eight write operations and belongs in its own reviewed change.
+These models existed and were unit-tested for some time before anything
+actually called them, while this docstring claimed the validation was already
+happening. Gourmand's DC004-dead_structs check found the gap. If you add a
+write tool, wire it to a model here and add a case to
+TestWritePathValidation in tests/test_validation.py, which asserts each tool
+rejects bad input -- those tests are verified to fail when the wiring is
+removed.
 """
 
 from typing import Literal

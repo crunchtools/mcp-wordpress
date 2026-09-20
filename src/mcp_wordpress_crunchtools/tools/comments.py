@@ -6,7 +6,7 @@ Tools for managing WordPress comments.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_positive_id
+from ..models import CommentInput, CommentUpdateInput, validate_positive_id
 from .formatting import get_rendered
 
 
@@ -102,19 +102,17 @@ async def create_comment(
     Returns:
         Created comment details
     """
+    comment_data = CommentInput.model_validate(
+        {
+            "post": post,
+            "content": content,
+            "parent": parent,
+            "author_name": author_name,
+            "author_email": author_email,
+        }
+    ).model_dump(exclude_none=True)
+
     client = get_client()
-
-    comment_data: dict[str, Any] = {
-        "post": post,
-        "content": content,
-    }
-
-    if parent is not None:
-        comment_data["parent"] = parent
-    if author_name is not None:
-        comment_data["author_name"] = author_name
-    if author_email is not None:
-        comment_data["author_email"] = author_email
 
     response = await client.post("/comments", json_data=comment_data)
 
@@ -139,15 +137,12 @@ async def update_comment(
     Returns:
         Updated comment details
     """
-    client = get_client()
     comment_id = validate_positive_id(comment_id)
+    comment_data = CommentUpdateInput.model_validate(
+        {"content": content, "status": status}
+    ).model_dump(exclude_none=True)
 
-    comment_data: dict[str, Any] = {}
-
-    if content is not None:
-        comment_data["content"] = content
-    if status is not None:
-        comment_data["status"] = status
+    client = get_client()
 
     if not comment_data:
         return {"error": "No fields to update"}

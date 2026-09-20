@@ -6,7 +6,7 @@ Tools for creating, reading, updating, and deleting WordPress posts.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_positive_id
+from ..models import PostInput, PostUpdateInput, validate_positive_id
 from .formatting import add_embedded_author, format_common, get_rendered
 
 
@@ -136,28 +136,22 @@ async def create_post(
     Returns:
         Created post details
     """
+    post_data = PostInput.model_validate(
+        {
+            "title": title,
+            "content": content,
+            "status": status,
+            "excerpt": excerpt,
+            "slug": slug,
+            "categories": categories,
+            "tags": tags,
+            "featured_media": featured_media,
+            "date": date,
+            "format": post_format,
+        }
+    ).model_dump(exclude_none=True)
+
     client = get_client()
-
-    post_data: dict[str, Any] = {
-        "title": title,
-        "content": content,
-        "status": status,
-    }
-
-    if excerpt is not None:
-        post_data["excerpt"] = excerpt
-    if slug is not None:
-        post_data["slug"] = slug
-    if categories is not None:
-        post_data["categories"] = categories
-    if tags is not None:
-        post_data["tags"] = tags
-    if featured_media is not None:
-        post_data["featured_media"] = featured_media
-    if date is not None:
-        post_data["date"] = date
-    if post_format is not None:
-        post_data["format"] = post_format
 
     response = await client.post("/posts", json_data=post_data)
 
@@ -198,25 +192,23 @@ async def update_post(
     Returns:
         Updated post details
     """
-    client = get_client()
     post_id = validate_positive_id(post_id)
+    post_data = PostUpdateInput.model_validate(
+        {
+            "title": title,
+            "content": content,
+            "status": status,
+            "excerpt": excerpt,
+            "slug": slug,
+            "categories": categories,
+            "tags": tags,
+            "featured_media": featured_media,
+            "date": date,
+            "format": post_format,
+        }
+    ).model_dump(exclude_none=True)
 
-    post_data: dict[str, Any] = {
-        field: value
-        for field, value in (
-            ("title", title),
-            ("content", content),
-            ("status", status),
-            ("excerpt", excerpt),
-            ("slug", slug),
-            ("categories", categories),
-            ("tags", tags),
-            ("featured_media", featured_media),
-            ("date", date),
-            ("format", post_format),
-        )
-        if value is not None
-    }
+    client = get_client()
 
     if not post_data:
         return {"error": "No fields to update"}

@@ -9,7 +9,7 @@ from typing import Any
 
 from ..client import get_client
 from ..errors import UserError
-from ..models import validate_positive_id
+from ..models import MediaInput, MediaUpdateInput, validate_positive_id
 from .formatting import get_rendered
 
 # Maximum upload size (50MB)
@@ -152,6 +152,19 @@ async def upload_media(
     Returns:
         Uploaded media item details
     """
+    metadata = MediaInput.model_validate(
+        {
+            "title": title,
+            "alt_text": alt_text,
+            "caption": caption,
+            "description": description,
+        }
+    ).model_dump(exclude_none=True)
+    # Filtered on truthiness rather than `is not None` because WordPress reads
+    # an empty form field as an instruction to blank the value, and the
+    # original behaviour was to omit it instead.
+    form_data: dict[str, Any] = {key: val for key, val in metadata.items() if val}
+
     client = get_client()
 
     error, file_bytes, filename, content_type = _read_upload_file(file_path)
@@ -162,17 +175,6 @@ async def upload_media(
     files = {
         "file": (filename, file_bytes, content_type),
     }
-
-    # Additional metadata as form data
-    form_data: dict[str, Any] = {}
-    if title:
-        form_data["title"] = title
-    if alt_text:
-        form_data["alt_text"] = alt_text
-    if caption:
-        form_data["caption"] = caption
-    if description:
-        form_data["description"] = description
 
     response = await client.post("/media", data=form_data, files=files)
 
@@ -201,19 +203,17 @@ async def update_media(
     Returns:
         Updated media item details
     """
-    client = get_client()
     media_id = validate_positive_id(media_id)
+    media_data = MediaUpdateInput.model_validate(
+        {
+            "title": title,
+            "alt_text": alt_text,
+            "caption": caption,
+            "description": description,
+        }
+    ).model_dump(exclude_none=True)
 
-    media_data: dict[str, Any] = {}
-
-    if title is not None:
-        media_data["title"] = title
-    if alt_text is not None:
-        media_data["alt_text"] = alt_text
-    if caption is not None:
-        media_data["caption"] = caption
-    if description is not None:
-        media_data["description"] = description
+    client = get_client()
 
     if not media_data:
         return {"error": "No fields to update"}

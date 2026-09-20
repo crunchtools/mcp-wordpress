@@ -6,7 +6,7 @@ Tools for creating, reading, updating, and deleting WordPress pages.
 from typing import Any
 
 from ..client import get_client
-from ..models import validate_positive_id
+from ..models import PageInput, PageUpdateInput, validate_positive_id
 from .formatting import add_embedded_author, format_common, get_rendered
 
 
@@ -113,28 +113,22 @@ async def create_page(
     Returns:
         Created page details
     """
+    page_data = PageInput.model_validate(
+        {
+            "title": title,
+            "content": content,
+            "status": status,
+            "excerpt": excerpt,
+            "slug": slug,
+            "parent": parent,
+            "menu_order": menu_order,
+            "template": template,
+            "featured_media": featured_media,
+            "date": date,
+        }
+    ).model_dump(exclude_none=True)
+
     client = get_client()
-
-    page_data: dict[str, Any] = {
-        "title": title,
-        "content": content,
-        "status": status,
-    }
-
-    if excerpt is not None:
-        page_data["excerpt"] = excerpt
-    if slug is not None:
-        page_data["slug"] = slug
-    if parent is not None:
-        page_data["parent"] = parent
-    if menu_order is not None:
-        page_data["menu_order"] = menu_order
-    if template is not None:
-        page_data["template"] = template
-    if featured_media is not None:
-        page_data["featured_media"] = featured_media
-    if date is not None:
-        page_data["date"] = date
 
     response = await client.post("/pages", json_data=page_data)
 
@@ -175,25 +169,23 @@ async def update_page(
     Returns:
         Updated page details
     """
-    client = get_client()
     page_id = validate_positive_id(page_id)
+    page_data = PageUpdateInput.model_validate(
+        {
+            "title": title,
+            "content": content,
+            "status": status,
+            "excerpt": excerpt,
+            "slug": slug,
+            "parent": parent,
+            "menu_order": menu_order,
+            "template": template,
+            "featured_media": featured_media,
+            "date": date,
+        }
+    ).model_dump(exclude_none=True)
 
-    page_data: dict[str, Any] = {
-        field: value
-        for field, value in (
-            ("title", title),
-            ("content", content),
-            ("status", status),
-            ("excerpt", excerpt),
-            ("slug", slug),
-            ("parent", parent),
-            ("menu_order", menu_order),
-            ("template", template),
-            ("featured_media", featured_media),
-            ("date", date),
-        )
-        if value is not None
-    }
+    client = get_client()
 
     if not page_data:
         return {"error": "No fields to update"}
