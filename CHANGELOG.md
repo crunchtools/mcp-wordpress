@@ -8,6 +8,17 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-20
+
+### Fixed
+- The v0.5.0 tag's `Container Build & Push` run pushed to Quay.io but failed
+  before reaching GHCR; re-running that historical workflow now fails outright
+  because it pins `aquasecurity/trivy-action@0.34.1`, a version that no longer
+  resolves upstream (fixed on main by #7's Trivy re-pin, well after v0.5.0
+  shipped). Cutting v0.5.1 from current main — which has the Trivy fix, the
+  split quay/ghcr jobs, and every dependency bump since — so the release
+  actually lands in both registries.
+
 ## [0.5.0] - 2026-03-03
 
 Upgrade to V2 architecture — the last of 8 CrunchTools MCP servers to reach V2
