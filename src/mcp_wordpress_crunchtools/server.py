@@ -43,10 +43,14 @@ from .tools import (
 
 logger = logging.getLogger(__name__)
 
+# A gateway drops an invalid optional argument only on a tool annotated read-only;
+# on anything else it refuses the call. Only tools that change nothing in WordPress get this.
+READ_ONLY = {"readOnlyHint": True}
+
 # Create the FastMCP server
 mcp = FastMCP(
     name="mcp-wordpress-crunchtools",
-    version="0.5.1",
+    version="0.6.0",
     instructions=(
         "Secure MCP server for WordPress content management. "
         "For media uploads: when running as a container, files must be placed in "
@@ -60,7 +64,7 @@ mcp = FastMCP(
 # Site Tools
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_site_info() -> dict[str, Any]:
     """Get WordPress site information.
 
@@ -69,7 +73,7 @@ async def wordpress_get_site_info() -> dict[str, Any]:
     return await get_site_info()
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_test_connection() -> dict[str, Any]:
     """Test connection to WordPress REST API.
 
@@ -81,7 +85,7 @@ async def wordpress_test_connection() -> dict[str, Any]:
 # Post Tools
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_posts(
     status: str | None = None,
     search: str | None = None,
@@ -119,7 +123,7 @@ async def wordpress_list_posts(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_post(post_id: int) -> dict[str, Any]:
     """Get a single WordPress post by ID with full content.
 
@@ -132,7 +136,7 @@ async def wordpress_get_post(post_id: int) -> dict[str, Any]:
     return await get_post(post_id=post_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_search_posts(
     keyword: str,
     page: int = 1,
@@ -256,7 +260,7 @@ async def wordpress_delete_post(post_id: int, force: bool = False) -> dict[str, 
     return await delete_post(post_id=post_id, force=force)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_revisions(post_id: int) -> dict[str, Any]:
     """List revisions for a WordPress post.
 
@@ -269,7 +273,7 @@ async def wordpress_list_revisions(post_id: int) -> dict[str, Any]:
     return await list_revisions(post_id=post_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
     """Get a specific revision of a WordPress post.
 
@@ -283,7 +287,7 @@ async def wordpress_get_revision(post_id: int, revision_id: int) -> dict[str, An
     return await get_revision(post_id=post_id, revision_id=revision_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_categories(
     page: int = 1,
     per_page: int = 100,
@@ -302,7 +306,7 @@ async def wordpress_list_categories(
     return await list_categories(page=page, per_page=per_page, search=search)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_tags(
     page: int = 1,
     per_page: int = 100,
@@ -324,7 +328,7 @@ async def wordpress_list_tags(
 # Page Tools
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_pages(
     status: str | None = None,
     search: str | None = None,
@@ -359,7 +363,7 @@ async def wordpress_list_pages(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_page(page_id: int) -> dict[str, Any]:
     """Get a single WordPress page by ID with full content.
 
@@ -477,7 +481,7 @@ async def wordpress_delete_page(page_id: int, force: bool = False) -> dict[str, 
     return await delete_page(page_id=page_id, force=force)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_page_revisions(page_id: int) -> dict[str, Any]:
     """List revisions for a WordPress page.
 
@@ -493,7 +497,7 @@ async def wordpress_list_page_revisions(page_id: int) -> dict[str, Any]:
 # Media Tools
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_media(
     media_type: str | None = None,
     mime_type: str | None = None,
@@ -528,7 +532,7 @@ async def wordpress_list_media(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_media(media_id: int) -> dict[str, Any]:
     """Get a single WordPress media item by ID.
 
@@ -621,7 +625,7 @@ async def wordpress_delete_media(media_id: int, force: bool = True) -> dict[str,
     return await delete_media(media_id=media_id, force=force)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_media_url(media_id: int, size: str = "full") -> dict[str, Any]:
     """Get the public URL for a WordPress media item.
 
@@ -638,7 +642,7 @@ async def wordpress_get_media_url(media_id: int, size: str = "full") -> dict[str
 # Comment Tools
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_comments(
     post: int | None = None,
     status: str | None = None,
@@ -673,7 +677,7 @@ async def wordpress_list_comments(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_comment(comment_id: int) -> dict[str, Any]:
     """Get a single WordPress comment by ID.
 

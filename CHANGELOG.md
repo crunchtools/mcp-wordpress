@@ -8,7 +8,23 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-10
+
+### Added
+- The 17 tools that only read (the `get_*`, `list_*` and `search_posts` tools,
+  `get_site_info`, `test_connection`) publish `readOnlyHint: true`. A gateway
+  uses it to decide whether an invalid optional argument may be dropped or must
+  refuse the call (crunchtools/constitution#35).
+- Tests pin every registered tool into `READ_ONLY` or `WRITES`, and check that
+  each read-only tool sends WordPress nothing but GET.
+
+### Fixed
+- The Containerfile `version` label said 0.5.0 through the 0.5.1 release; it
+  carries the release version again.
+
 ### Changed
+- Inherits constitution v1.22.0; the workflow pins and the pre-commit hook rev
+  move with it.
 - Constitution is now a v1.18.0 manifest: only repo-specific facts remain;
   fleet and profile rules apply by reference.
 - Constitution validation is pinned via `.github/workflows/constitution.yml`.

@@ -20,6 +20,7 @@ from mcp_wordpress_crunchtools.errors import (
     ValidationError,
     WordPressApiError,
 )
+from mcp_wordpress_crunchtools.server import mcp
 from mcp_wordpress_crunchtools.tools import __all__ as tools_all
 from mcp_wordpress_crunchtools.tools import (
     create_comment,
@@ -107,6 +108,97 @@ def test_imports() -> None:
     assert len(TOOL_FUNCTIONS) == EXPECTED_TOOL_COUNT
     for func in TOOL_FUNCTIONS:
         assert callable(func)
+
+
+READ_ONLY = frozenset(
+    {
+        "wordpress_get_site_info",
+        "wordpress_test_connection",
+        "wordpress_list_posts",
+        "wordpress_get_post",
+        "wordpress_search_posts",
+        "wordpress_list_revisions",
+        "wordpress_get_revision",
+        "wordpress_list_categories",
+        "wordpress_list_tags",
+        "wordpress_list_pages",
+        "wordpress_get_page",
+        "wordpress_list_page_revisions",
+        "wordpress_list_media",
+        "wordpress_get_media",
+        "wordpress_get_media_url",
+        "wordpress_list_comments",
+        "wordpress_get_comment",
+    }
+)
+WRITES = frozenset(
+    {
+        "wordpress_create_post",
+        "wordpress_update_post",
+        "wordpress_delete_post",
+        "wordpress_create_page",
+        "wordpress_update_page",
+        "wordpress_delete_page",
+        "wordpress_upload_media",
+        "wordpress_update_media",
+        "wordpress_delete_media",
+        "wordpress_create_comment",
+        "wordpress_update_comment",
+        "wordpress_delete_comment",
+        "wordpress_moderate_comment",
+    }
+)
+
+# Arguments that satisfy each read-only tool's required parameters.
+READ_ONLY_CALLS: dict[str, dict[str, object]] = {
+    "wordpress_get_site_info": {},
+    "wordpress_test_connection": {},
+    "wordpress_list_posts": {"search": "podman", "categories": [3], "tags": [5]},
+    "wordpress_get_post": {"post_id": 42},
+    "wordpress_search_posts": {"keyword": "podman"},
+    "wordpress_list_revisions": {"post_id": 42},
+    "wordpress_get_revision": {"post_id": 42, "revision_id": 7},
+    "wordpress_list_categories": {"search": "linux"},
+    "wordpress_list_tags": {"search": "linux"},
+    "wordpress_list_pages": {"parent": 1},
+    "wordpress_get_page": {"page_id": 42},
+    "wordpress_list_page_revisions": {"page_id": 42},
+    "wordpress_list_media": {"media_type": "image"},
+    "wordpress_get_media": {"media_id": 42},
+    "wordpress_get_media_url": {"media_id": 42, "size": "medium"},
+    "wordpress_list_comments": {"post": 42},
+    "wordpress_get_comment": {"comment_id": 42},
+}
+
+
+class TestReadOnlyAnnotation:
+    """Every registered tool is classified, and the reads really only read."""
+
+    @pytest.mark.asyncio
+    async def test_every_tool_is_classified(self) -> None:
+        tools = await mcp.list_tools()
+        assert READ_ONLY.isdisjoint(WRITES)
+        assert {tool.name for tool in tools} == READ_ONLY | WRITES
+        annotated = {
+            tool.name
+            for tool in tools
+            if tool.annotations is not None
+            and tool.annotations.model_dump(by_alias=True).get("readOnlyHint") is True
+        }
+        assert annotated == READ_ONLY
+
+    def test_every_read_only_tool_has_a_call(self) -> None:
+        assert set(READ_ONLY_CALLS) == READ_ONLY
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("name", sorted(READ_ONLY))
+    async def test_read_only_tool_only_sends_get(self, name: str) -> None:
+        """WordPress REST writes are POST, PATCH, PUT or DELETE; a read sends none."""
+        async with _patch_wp_client() as request:
+            await mcp.call_tool(name, READ_ONLY_CALLS[name])
+        assert request.await_count >= 1
+        for call in request.await_args_list:
+            assert call.kwargs["method"] in {"GET", "HEAD"}
 
 
 # Error Hierarchy Tests (preserved from original)
