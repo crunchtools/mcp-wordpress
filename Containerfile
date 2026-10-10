@@ -36,7 +36,7 @@ FROM quay.io/hummingbird/python:latest
 
 # Labels for container metadata
 LABEL name="mcp-wordpress-crunchtools" \
-      version="0.5.0" \
+      version="0.6.0" \
       summary="Secure MCP server for WordPress content management" \
       description="A security-focused MCP server for WordPress built on Red Hat UBI" \
       maintainer="crunchtools.com" \
