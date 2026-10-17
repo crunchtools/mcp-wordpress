@@ -8,6 +8,8 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-17
+
 ### Fixed
 - Every integer ID argument (`post_id`, `page_id`, `media_id`, `comment_id`,
   `revision_id`, and the `post` argument of `list_comments` and `create_comment`)
