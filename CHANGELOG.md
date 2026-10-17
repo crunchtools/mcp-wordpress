@@ -8,6 +8,13 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+### Fixed
+- Every integer ID argument (`post_id`, `page_id`, `media_id`, `comment_id`,
+  `revision_id`, and the `post` argument of `list_comments` and `create_comment`)
+  now publishes `minimum: 1` in the tool schema, so `0` and negative IDs are rejected.
+- The tests import `test_connection` under an alias so pytest no longer collects it
+  and makes a real request to example.com.
+
 ## [0.6.0] - 2026-10-10
 
 ### Added
