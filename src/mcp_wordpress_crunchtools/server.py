@@ -4,9 +4,10 @@ This module creates and configures the MCP server with all tools.
 """
 
 import logging
-from typing import Any
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from .tools import (
     create_comment,
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 # A gateway drops an invalid optional argument only on a tool annotated read-only;
 # on anything else it refuses the call. Only tools that change nothing in WordPress get this.
 READ_ONLY = {"readOnlyHint": True}
+
+# Published as `minimum: 1` so a gateway can prove 0 or a negative ID invalid.
+PositiveId = Annotated[int, Field(ge=1)]
 
 # Create the FastMCP server
 mcp = FastMCP(
@@ -124,7 +128,7 @@ async def wordpress_list_posts(
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_post(post_id: int) -> dict[str, Any]:
+async def wordpress_get_post(post_id: PositiveId) -> dict[str, Any]:
     """Get a single WordPress post by ID with full content.
 
     Args:
@@ -201,7 +205,7 @@ async def wordpress_create_post(
 
 @mcp.tool()
 async def wordpress_update_post(
-    post_id: int,
+    post_id: PositiveId,
     title: str | None = None,
     content: str | None = None,
     status: str | None = None,
@@ -247,7 +251,7 @@ async def wordpress_update_post(
 
 
 @mcp.tool()
-async def wordpress_delete_post(post_id: int, force: bool = False) -> dict[str, Any]:
+async def wordpress_delete_post(post_id: PositiveId, force: bool = False) -> dict[str, Any]:
     """Delete or trash a WordPress post.
 
     Args:
@@ -261,7 +265,7 @@ async def wordpress_delete_post(post_id: int, force: bool = False) -> dict[str, 
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_list_revisions(post_id: int) -> dict[str, Any]:
+async def wordpress_list_revisions(post_id: PositiveId) -> dict[str, Any]:
     """List revisions for a WordPress post.
 
     Args:
@@ -274,7 +278,7 @@ async def wordpress_list_revisions(post_id: int) -> dict[str, Any]:
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
+async def wordpress_get_revision(post_id: PositiveId, revision_id: PositiveId) -> dict[str, Any]:
     """Get a specific revision of a WordPress post.
 
     Args:
@@ -364,7 +368,7 @@ async def wordpress_list_pages(
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_page(page_id: int) -> dict[str, Any]:
+async def wordpress_get_page(page_id: PositiveId) -> dict[str, Any]:
     """Get a single WordPress page by ID with full content.
 
     Args:
@@ -422,7 +426,7 @@ async def wordpress_create_page(
 
 @mcp.tool()
 async def wordpress_update_page(
-    page_id: int,
+    page_id: PositiveId,
     title: str | None = None,
     content: str | None = None,
     status: str | None = None,
@@ -468,7 +472,7 @@ async def wordpress_update_page(
 
 
 @mcp.tool()
-async def wordpress_delete_page(page_id: int, force: bool = False) -> dict[str, Any]:
+async def wordpress_delete_page(page_id: PositiveId, force: bool = False) -> dict[str, Any]:
     """Delete or trash a WordPress page.
 
     Args:
@@ -482,7 +486,7 @@ async def wordpress_delete_page(page_id: int, force: bool = False) -> dict[str, 
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_list_page_revisions(page_id: int) -> dict[str, Any]:
+async def wordpress_list_page_revisions(page_id: PositiveId) -> dict[str, Any]:
     """List revisions for a WordPress page.
 
     Args:
@@ -533,7 +537,7 @@ async def wordpress_list_media(
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_media(media_id: int) -> dict[str, Any]:
+async def wordpress_get_media(media_id: PositiveId) -> dict[str, Any]:
     """Get a single WordPress media item by ID.
 
     Args:
@@ -584,7 +588,7 @@ async def wordpress_upload_media(
 
 @mcp.tool()
 async def wordpress_update_media(
-    media_id: int,
+    media_id: PositiveId,
     title: str | None = None,
     alt_text: str | None = None,
     caption: str | None = None,
@@ -612,7 +616,7 @@ async def wordpress_update_media(
 
 
 @mcp.tool()
-async def wordpress_delete_media(media_id: int, force: bool = True) -> dict[str, Any]:
+async def wordpress_delete_media(media_id: PositiveId, force: bool = True) -> dict[str, Any]:
     """Delete a WordPress media item.
 
     Args:
@@ -626,7 +630,7 @@ async def wordpress_delete_media(media_id: int, force: bool = True) -> dict[str,
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_media_url(media_id: int, size: str = "full") -> dict[str, Any]:
+async def wordpress_get_media_url(media_id: PositiveId, size: str = "full") -> dict[str, Any]:
     """Get the public URL for a WordPress media item.
 
     Args:
@@ -644,7 +648,7 @@ async def wordpress_get_media_url(media_id: int, size: str = "full") -> dict[str
 
 @mcp.tool(annotations=READ_ONLY)
 async def wordpress_list_comments(
-    post: int | None = None,
+    post: PositiveId | None = None,
     status: str | None = None,
     search: str | None = None,
     page: int = 1,
@@ -678,7 +682,7 @@ async def wordpress_list_comments(
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def wordpress_get_comment(comment_id: int) -> dict[str, Any]:
+async def wordpress_get_comment(comment_id: PositiveId) -> dict[str, Any]:
     """Get a single WordPress comment by ID.
 
     Args:
@@ -692,7 +696,7 @@ async def wordpress_get_comment(comment_id: int) -> dict[str, Any]:
 
 @mcp.tool()
 async def wordpress_create_comment(
-    post: int,
+    post: PositiveId,
     content: str,
     parent: int | None = None,
     author_name: str | None = None,
@@ -721,7 +725,7 @@ async def wordpress_create_comment(
 
 @mcp.tool()
 async def wordpress_update_comment(
-    comment_id: int,
+    comment_id: PositiveId,
     content: str | None = None,
     status: str | None = None,
 ) -> dict[str, Any]:
@@ -743,7 +747,7 @@ async def wordpress_update_comment(
 
 
 @mcp.tool()
-async def wordpress_delete_comment(comment_id: int, force: bool = False) -> dict[str, Any]:
+async def wordpress_delete_comment(comment_id: PositiveId, force: bool = False) -> dict[str, Any]:
     """Delete or trash a WordPress comment.
 
     Args:
@@ -758,7 +762,7 @@ async def wordpress_delete_comment(comment_id: int, force: bool = False) -> dict
 
 @mcp.tool()
 async def wordpress_moderate_comment(
-    comment_id: int,
+    comment_id: PositiveId,
     action: str,
 ) -> dict[str, Any]:
     """Moderate a WordPress comment by changing its status.

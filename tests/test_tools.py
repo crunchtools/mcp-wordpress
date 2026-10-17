@@ -47,19 +47,19 @@ from mcp_wordpress_crunchtools.tools import (
     list_tags,
     moderate_comment,
     search_posts,
-    test_connection,
     update_comment,
     update_media,
     update_page,
     update_post,
     upload_media,
 )
+from mcp_wordpress_crunchtools.tools import test_connection as check_connection
 from tests.conftest import _mock_wp_response, _patch_wp_client
 
 TOOL_FUNCTIONS = [
     # Site
     get_site_info,
-    test_connection,
+    check_connection,
     # Posts
     list_posts,
     get_post,
@@ -189,6 +189,17 @@ class TestReadOnlyAnnotation:
 
     def test_every_read_only_tool_has_a_call(self) -> None:
         assert set(READ_ONLY_CALLS) == READ_ONLY
+
+    @pytest.mark.asyncio
+    async def test_integer_ids_publish_minimum_of_one(self) -> None:
+        tools = await mcp.list_tools()
+        checked = 0
+        for tool in tools:
+            for arg, schema in tool.parameters.get("properties", {}).items():
+                if arg.endswith("_id") or arg == "post":
+                    assert schema.get("minimum") == 1, f"{tool.name}.{arg}"
+                    checked += 1
+        assert checked >= 11
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("name", sorted(READ_ONLY))
@@ -335,7 +346,7 @@ class TestSiteTools:
         user = {"id": 1, "name": "admin", "slug": "admin", "capabilities": {"edit_posts": True}}
         resp = _mock_wp_response(json_data=user)
         async with _patch_wp_client(response=resp):
-            result = await test_connection()
+            result = await check_connection()
             assert result["success"] is True
             assert result["authenticated_as"] == "admin"
             assert result["user_id"] == 1
