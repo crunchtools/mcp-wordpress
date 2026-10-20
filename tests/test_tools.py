@@ -197,7 +197,12 @@ class TestReadOnlyAnnotation:
         for tool in tools:
             for arg, schema in tool.parameters.get("properties", {}).items():
                 if arg.endswith("_id") or arg == "post":
-                    assert schema.get("minimum") == 1, f"{tool.name}.{arg}"
+                    # An optional ID (`PositiveId | None`) is published as
+                    # anyOf [integer with minimum, null]; check the integer branch.
+                    branches = schema.get("anyOf", [schema])
+                    integer = [b for b in branches if b.get("type") == "integer"]
+                    assert len(integer) == 1, f"{tool.name}.{arg}"
+                    assert integer[0].get("minimum") == 1, f"{tool.name}.{arg}"
                     checked += 1
         assert checked >= 11
 
