@@ -30,6 +30,9 @@ from mcp_wordpress_crunchtools.tools import (
     delete_media,
     delete_page,
     delete_post,
+    edit_draft,
+    edit_page,
+    edit_post,
     get_comment,
     get_media,
     get_media_url,
@@ -66,6 +69,8 @@ TOOL_FUNCTIONS = [
     search_posts,
     create_post,
     update_post,
+    edit_post,
+    edit_draft,
     delete_post,
     list_revisions,
     get_revision,
@@ -76,6 +81,7 @@ TOOL_FUNCTIONS = [
     get_page,
     create_page,
     update_page,
+    edit_page,
     delete_page,
     list_page_revisions,
     # Media
@@ -94,8 +100,8 @@ TOOL_FUNCTIONS = [
     moderate_comment,
 ]
 
-EXPECTED_TOOL_COUNT = 30
-EXPECTED_ALL_COUNT = 30
+EXPECTED_TOOL_COUNT = 33
+EXPECTED_ALL_COUNT = 33
 
 
 def test_tool_count() -> None:
@@ -135,9 +141,12 @@ WRITES = frozenset(
     {
         "wordpress_create_post",
         "wordpress_update_post",
+        "wordpress_edit_post",
+        "wordpress_edit_draft",
         "wordpress_delete_post",
         "wordpress_create_page",
         "wordpress_update_page",
+        "wordpress_edit_page",
         "wordpress_delete_page",
         "wordpress_upload_media",
         "wordpress_update_media",

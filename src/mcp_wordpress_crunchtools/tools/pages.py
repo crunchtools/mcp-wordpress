@@ -7,7 +7,8 @@ from typing import Any
 
 from ..client import get_client
 from ..models import PageInput, PageUpdateInput, validate_positive_id
-from .formatting import add_embedded_author, format_common, get_rendered
+from .editing import edit_source, guarded_update
+from .formatting import add_embedded_author, format_common, get_rendered, get_source, source_version
 
 
 async def list_pages(
@@ -65,18 +66,20 @@ async def list_pages(
 
 
 async def get_page(page_id: int) -> dict[str, Any]:
-    """Get a single page by ID with full content.
+    """Get a single page by ID with its saved source.
 
     Args:
         page_id: Page ID
 
     Returns:
-        Full page details including content
+        Page details. ``content``, ``title`` and ``excerpt`` are the source as
+        the editor saved it, safe to edit and write back; ``version`` is what
+        a write's ``expected_version`` checks against.
     """
     client = get_client()
     page_id = validate_positive_id(page_id)
 
-    response = await client.get(f"/pages/{page_id}", params={"_embed": "true"})
+    response = await client.get(f"/pages/{page_id}", params={"_embed": "true", "context": "edit"})
 
     if isinstance(response, dict):
         return {"page": _format_page(response, include_content=True)}
@@ -150,6 +153,7 @@ async def update_page(
     template: str | None = None,
     featured_media: int | None = None,
     date: str | None = None,
+    expected_version: str | None = None,
 ) -> dict[str, Any]:
     """Update an existing page.
 
@@ -165,9 +169,12 @@ async def update_page(
         template: New template
         featured_media: New featured image ID
         date: New publication date
+        expected_version: Refuse the write unless the page is still at this
+            version (from get_page)
 
     Returns:
-        Updated page details
+        The updated page's id, title, status, version and link. Content that
+        is rendered output, or that strips the page's block markup, is refused.
     """
     page_id = validate_positive_id(page_id)
     page_data = PageUpdateInput.model_validate(
@@ -182,20 +189,39 @@ async def update_page(
             "template": template,
             "featured_media": featured_media,
             "date": date,
+            "expected_version": expected_version,
         }
     ).model_dump(exclude_none=True)
-
-    client = get_client()
+    expected = page_data.pop("expected_version", None)
 
     if not page_data:
         return {"error": "No fields to update"}
 
-    response = await client.patch(f"/pages/{page_id}", json_data=page_data)
+    return {"page": await guarded_update("pages", page_id, page_data, expected)}
 
-    if isinstance(response, dict):
-        return {"page": _format_page(response, include_content=True)}
 
-    return {"error": "Unexpected response format"}
+async def edit_page(
+    page_id: int,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a page's source, without resending the page.
+
+    Args:
+        page_id: Page ID
+        old_text: Exact text from the source (get_page) to replace; must occur once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the page is still at this version
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The page's id, title, status, new version and link, and the number of
+        replacements made
+    """
+    result = await edit_source("pages", page_id, old_text, new_text, expected_version, replace_all)
+    return {"page": result}
 
 
 async def delete_page(page_id: int, force: bool = False) -> dict[str, Any]:
@@ -262,7 +288,8 @@ def _format_page(page: dict[str, Any], include_content: bool = False) -> dict[st
     formatted["template"] = page.get("template", "")
 
     if include_content:
-        formatted["content"] = get_rendered(page.get("content"))
+        formatted["content"] = get_source(page.get("content"))
+        formatted["version"] = source_version(page)
 
     add_embedded_author(formatted, page)
     return formatted

@@ -24,7 +24,7 @@ This MCP server is designed to be:
 
 ## Features
 
-- **30 Tools** for posts, pages, media, and comments
+- **33 Tools** for posts, pages, media, and comments
 - **Security-focused**: Credentials protected, input validation, SSRF prevention
 - **Developer workflow**: Scheduled publishing, revisions, search
 - **Easy integration**: Works with Claude Code and other MCP clients
@@ -145,14 +145,27 @@ claude mcp add mcp-wordpress-crunchtools \
 | `wordpress_get_site_info` | Get site title, description, URL, timezone |
 | `wordpress_test_connection` | Verify API credentials work |
 
+### Editing Model
+
+Reads return the source the editor saved (`context=edit`), never the rendered page, so what
+an agent reads is safe to write back. Changes go through the `edit_*` tools: the agent sends
+the exact text to replace and its replacement, the server applies it to the current source,
+and the post never round-trips through the agent. The post and page update and edit tools
+take an optional `expected_version` (the `version` `get_post` or `get_page` returned); when
+it is given, the write is refused if the item changed since. `update_*` refuses content that
+is rendered output. `edit_draft` edits only draft or pending posts, so a gateway can grant
+revision rights without the power to change published posts.
+
 ### Post Tools
 | Tool | Description |
 |------|-------------|
 | `wordpress_list_posts` | List posts with filtering (status, category, search) |
-| `wordpress_get_post` | Get single post by ID with full content |
+| `wordpress_get_post` | Get single post by ID with its saved source (block markup included) and version |
 | `wordpress_search_posts` | Search posts by keyword |
 | `wordpress_create_post` | Create new post (supports scheduling) |
-| `wordpress_update_post` | Update existing post |
+| `wordpress_update_post` | Update existing post; refuses rendered HTML, and a stale `expected_version` when given |
+| `wordpress_edit_post` | Replace text in a post's source without resending the post |
+| `wordpress_edit_draft` | Same as `edit_post`, for draft or pending posts only; refuses any other status |
 | `wordpress_delete_post` | Delete/trash a post |
 | `wordpress_list_revisions` | List revisions for a post |
 | `wordpress_get_revision` | Get specific revision content |
@@ -163,9 +176,10 @@ claude mcp add mcp-wordpress-crunchtools \
 | Tool | Description |
 |------|-------------|
 | `wordpress_list_pages` | List pages with filtering |
-| `wordpress_get_page` | Get single page by ID |
+| `wordpress_get_page` | Get single page by ID with its saved source and version |
 | `wordpress_create_page` | Create new page |
-| `wordpress_update_page` | Update existing page |
+| `wordpress_update_page` | Update existing page; refuses rendered HTML, and a stale `expected_version` when given |
+| `wordpress_edit_page` | Replace text in a page's source without resending the page |
 | `wordpress_delete_page` | Delete/trash a page |
 | `wordpress_list_page_revisions` | List page revisions |
 

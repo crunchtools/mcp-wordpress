@@ -22,6 +22,7 @@ from .media import (
 from .pages import (
     create_page,
     delete_page,
+    edit_page,
     get_page,
     list_page_revisions,
     list_pages,
@@ -30,6 +31,8 @@ from .pages import (
 from .posts import (
     create_post,
     delete_post,
+    edit_draft,
+    edit_post,
     get_post,
     get_revision,
     list_categories,
@@ -51,6 +54,8 @@ __all__ = [
     "search_posts",
     "create_post",
     "update_post",
+    "edit_post",
+    "edit_draft",
     "delete_post",
     "list_revisions",
     "get_revision",
@@ -61,6 +66,7 @@ __all__ = [
     "get_page",
     "create_page",
     "update_page",
+    "edit_page",
     "delete_page",
     "list_page_revisions",
     # Media

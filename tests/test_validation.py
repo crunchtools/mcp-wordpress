@@ -243,6 +243,36 @@ class TestWritePathValidation:
         with pytest.raises(ValidationError):
             await update_post(post_id=1, status="not-a-status")
 
+    async def test_edit_post_rejects_empty_old_text(self) -> None:
+        from mcp_wordpress_crunchtools.tools import edit_post
+
+        with pytest.raises(ValidationError):
+            await edit_post(post_id=1, old_text="", new_text="x")
+
+    async def test_edit_draft_rejects_oversized_version(self) -> None:
+        from mcp_wordpress_crunchtools.tools import edit_draft
+
+        with pytest.raises(ValidationError):
+            await edit_draft(post_id=1, old_text="a", new_text="b", expected_version="v" * 65)
+
+    async def test_update_post_rejects_oversized_version(self) -> None:
+        from mcp_wordpress_crunchtools.tools import update_post
+
+        with pytest.raises(ValidationError):
+            await update_post(post_id=1, title="t", expected_version="v" * 65)
+
+    async def test_update_page_rejects_oversized_version(self) -> None:
+        from mcp_wordpress_crunchtools.tools import update_page
+
+        with pytest.raises(ValidationError):
+            await update_page(page_id=1, title="t", expected_version="v" * 65)
+
+    async def test_edit_page_rejects_empty_old_text(self) -> None:
+        from mcp_wordpress_crunchtools.tools import edit_page
+
+        with pytest.raises(ValidationError):
+            await edit_page(page_id=1, old_text="", new_text="x")
+
     async def test_create_page_rejects_oversized_slug(self) -> None:
         from mcp_wordpress_crunchtools.tools import create_page
 
