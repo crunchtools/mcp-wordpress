@@ -8,6 +8,8 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-27
+
 ### Added
 - `wordpress_edit_post`, `wordpress_edit_page` and `wordpress_edit_draft`: replace text in
   the saved source on the server, so an edit never resends the whole post. `edit_draft`
