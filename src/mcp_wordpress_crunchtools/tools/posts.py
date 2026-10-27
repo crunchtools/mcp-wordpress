@@ -7,7 +7,8 @@ from typing import Any
 
 from ..client import get_client
 from ..models import PostInput, PostUpdateInput, validate_positive_id
-from .formatting import add_embedded_author, format_common, get_rendered
+from .editing import edit_source, guarded_update
+from .formatting import add_embedded_author, format_common, get_rendered, get_source
 
 
 async def list_posts(
@@ -70,18 +71,20 @@ async def list_posts(
 
 
 async def get_post(post_id: int) -> dict[str, Any]:
-    """Get a single post by ID with full content.
+    """Get a single post by ID with its saved source.
 
     Args:
         post_id: Post ID
 
     Returns:
-        Full post details including content
+        Post details. ``content``, ``title`` and ``excerpt`` are the source as
+        the editor saved it, safe to edit and write back; ``version`` is what
+        a write's ``expected_version`` checks against.
     """
     client = get_client()
     post_id = validate_positive_id(post_id)
 
-    response = await client.get(f"/posts/{post_id}", params={"_embed": "true"})
+    response = await client.get(f"/posts/{post_id}", params={"_embed": "true", "context": "edit"})
 
     if isinstance(response, dict):
         return {"post": _format_post(response, include_content=True)}
@@ -173,6 +176,7 @@ async def update_post(
     featured_media: int | None = None,
     date: str | None = None,
     post_format: str | None = None,
+    expected_version: str | None = None,
 ) -> dict[str, Any]:
     """Update an existing post.
 
@@ -188,9 +192,12 @@ async def update_post(
         featured_media: New featured image ID
         date: New publication date
         post_format: New post format
+        expected_version: Refuse the write unless the post is still at this
+            version (from get_post)
 
     Returns:
-        Updated post details
+        The updated post's id, title, status, version and link. Content that
+        is rendered output, or that strips the post's block markup, is refused.
     """
     post_id = validate_positive_id(post_id)
     post_data = PostUpdateInput.model_validate(
@@ -205,20 +212,65 @@ async def update_post(
             "featured_media": featured_media,
             "date": date,
             "format": post_format,
+            "expected_version": expected_version,
         }
     ).model_dump(exclude_none=True)
-
-    client = get_client()
+    expected = post_data.pop("expected_version", None)
 
     if not post_data:
         return {"error": "No fields to update"}
 
-    response = await client.patch(f"/posts/{post_id}", json_data=post_data)
+    return {"post": await guarded_update("posts", post_id, post_data, expected)}
 
-    if isinstance(response, dict):
-        return {"post": _format_post(response, include_content=True)}
 
-    return {"error": "Unexpected response format"}
+async def edit_post(
+    post_id: int,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a post's source, without resending the post.
+
+    Args:
+        post_id: Post ID
+        old_text: Exact text from the source (get_post) to replace; must occur once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the post is still at this version
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The post's id, title, status, new version and link, and the number of
+        replacements made
+    """
+    result = await edit_source("posts", post_id, old_text, new_text, expected_version, replace_all)
+    return {"post": result}
+
+
+async def edit_draft(
+    post_id: int,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a draft or pending post's source; refuses any other status.
+
+    Args:
+        post_id: Post ID of a draft or pending post
+        old_text: Exact text from the source (get_post) to replace; must occur once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the post is still at this version
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The post's id, title, status, new version and link, and the number of
+        replacements made
+    """
+    result = await edit_source(
+        "posts", post_id, old_text, new_text, expected_version, replace_all, drafts_only=True
+    )
+    return {"post": result}
 
 
 async def delete_post(post_id: int, force: bool = False) -> dict[str, Any]:
@@ -291,7 +343,9 @@ async def get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
     post_id = validate_positive_id(post_id)
     revision_id = validate_positive_id(revision_id)  # Same validation
 
-    response = await client.get(f"/posts/{post_id}/revisions/{revision_id}")
+    response = await client.get(
+        f"/posts/{post_id}/revisions/{revision_id}", params={"context": "edit"}
+    )
 
     if isinstance(response, dict):
         return {
@@ -299,9 +353,9 @@ async def get_revision(post_id: int, revision_id: int) -> dict[str, Any]:
                 "id": response.get("id"),
                 "author": response.get("author"),
                 "date": response.get("date"),
-                "title": get_rendered(response.get("title")),
-                "content": get_rendered(response.get("content")),
-                "excerpt": get_rendered(response.get("excerpt")),
+                "title": get_source(response.get("title")),
+                "content": get_source(response.get("content")),
+                "excerpt": get_source(response.get("excerpt")),
             }
         }
 
@@ -401,7 +455,7 @@ def _format_post(post: dict[str, Any], include_content: bool = False) -> dict[st
     formatted["format"] = post.get("format", "standard")
 
     if include_content:
-        formatted["content"] = get_rendered(post.get("content"))
+        formatted["content"] = get_source(post.get("content"))
 
     add_embedded_author(formatted, post)
     return formatted

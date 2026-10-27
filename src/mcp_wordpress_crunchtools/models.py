@@ -2,7 +2,8 @@
 
 Every write tool validates its arguments through the model named for it before
 any HTTP request is made: create_post/update_post, create_page/update_page,
-upload_media/update_media and create_comment/update_comment. Invalid input
+edit_post/edit_page/edit_draft (EditInput), upload_media/update_media and
+create_comment/update_comment. Invalid input
 raises pydantic.ValidationError at the tool boundary rather than reaching the
 WordPress API.
 
@@ -57,6 +58,19 @@ def validate_positive_id(value: int) -> int:
     return value
 
 
+class EditInput(BaseModel):
+    """Validated input for edit_post, edit_page and edit_draft."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    old_text: str = Field(..., min_length=1, description="Exact source text to replace")
+    new_text: str = Field(..., description="Replacement text")
+    expected_version: str | None = Field(
+        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+    )
+    replace_all: bool = Field(default=False, description="Replace every occurrence")
+
+
 class PostInput(BaseModel):
     """Validated post input for creation."""
 
@@ -103,6 +117,9 @@ class PostUpdateInput(BaseModel):
     tags: list[int] | None = Field(default=None, description="List of tag IDs")
     featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
     date: str | None = Field(default=None, description="Publication date (ISO 8601)")
+    expected_version: str | None = Field(
+        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+    )
     format: str | None = Field(default=None, description="Post format")
 
     @field_validator("format")
@@ -149,6 +166,9 @@ class PageUpdateInput(BaseModel):
     template: str | None = Field(default=None, max_length=MAX_SLUG, description="Page template")
     featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
     date: str | None = Field(default=None, description="Publication date (ISO 8601)")
+    expected_version: str | None = Field(
+        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+    )
 
 
 class MediaInput(BaseModel):

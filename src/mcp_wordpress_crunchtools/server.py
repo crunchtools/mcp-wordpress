@@ -17,6 +17,9 @@ from .tools import (
     delete_media,
     delete_page,
     delete_post,
+    edit_draft,
+    edit_page,
+    edit_post,
     get_comment,
     get_media,
     get_media_url,
@@ -129,13 +132,15 @@ async def wordpress_list_posts(
 
 @mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_post(post_id: PositiveId) -> dict[str, Any]:
-    """Get a single WordPress post by ID with full content.
+    """Get a single WordPress post by ID with its saved source.
 
     Args:
         post_id: Post ID
 
     Returns:
-        Full post details including content
+        Post details. content, title and excerpt are the source as the editor
+        saved it (block markup included), safe to edit and write back. version
+        is what a write's expected_version checks against.
     """
     return await get_post(post_id=post_id)
 
@@ -216,8 +221,9 @@ async def wordpress_update_post(
     featured_media: int | None = None,
     date: str | None = None,
     post_format: str | None = None,
+    expected_version: str | None = None,
 ) -> dict[str, Any]:
-    """Update an existing WordPress post.
+    """Update an existing WordPress post. To change part of the content, use edit_post.
 
     Args:
         post_id: Post ID to update
@@ -231,9 +237,11 @@ async def wordpress_update_post(
         featured_media: New featured image ID
         date: New publication date
         post_format: New post format
+        expected_version: Refuse the write unless the post is still at this version (get_post)
 
     Returns:
-        Updated post details
+        The post's id, title, status, version and link. Content that is rendered
+        output, or that strips the post's block markup, is refused.
     """
     return await update_post(
         post_id=post_id,
@@ -247,6 +255,65 @@ async def wordpress_update_post(
         featured_media=featured_media,
         date=date,
         post_format=post_format,
+        expected_version=expected_version,
+    )
+
+
+@mcp.tool()
+async def wordpress_edit_post(
+    post_id: PositiveId,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a WordPress post's source, without resending the post.
+
+    Args:
+        post_id: Post ID
+        old_text: Exact text from get_post's content to replace; must occur exactly once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the post is still at this version (get_post)
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The post's id, title, status, new version and link, and replacements made
+    """
+    return await edit_post(
+        post_id=post_id,
+        old_text=old_text,
+        new_text=new_text,
+        expected_version=expected_version,
+        replace_all=replace_all,
+    )
+
+
+@mcp.tool()
+async def wordpress_edit_draft(
+    post_id: PositiveId,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a draft or pending WordPress post's source. Refuses any other status.
+
+    Args:
+        post_id: Post ID of a draft or pending post
+        old_text: Exact text from get_post's content to replace; must occur exactly once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the post is still at this version (get_post)
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The post's id, title, status, new version and link, and replacements made
+    """
+    return await edit_draft(
+        post_id=post_id,
+        old_text=old_text,
+        new_text=new_text,
+        expected_version=expected_version,
+        replace_all=replace_all,
     )
 
 
@@ -369,13 +436,15 @@ async def wordpress_list_pages(
 
 @mcp.tool(annotations=READ_ONLY)
 async def wordpress_get_page(page_id: PositiveId) -> dict[str, Any]:
-    """Get a single WordPress page by ID with full content.
+    """Get a single WordPress page by ID with its saved source.
 
     Args:
         page_id: Page ID
 
     Returns:
-        Full page details including content
+        Page details. content, title and excerpt are the source as the editor
+        saved it (block markup included), safe to edit and write back. version
+        is what a write's expected_version checks against.
     """
     return await get_page(page_id=page_id)
 
@@ -437,8 +506,9 @@ async def wordpress_update_page(
     template: str | None = None,
     featured_media: int | None = None,
     date: str | None = None,
+    expected_version: str | None = None,
 ) -> dict[str, Any]:
-    """Update an existing WordPress page.
+    """Update an existing WordPress page. To change part of the content, use edit_page.
 
     Args:
         page_id: Page ID to update
@@ -452,9 +522,11 @@ async def wordpress_update_page(
         template: New template
         featured_media: New featured image ID
         date: New publication date
+        expected_version: Refuse the write unless the page is still at this version (get_page)
 
     Returns:
-        Updated page details
+        The page's id, title, status, version and link. Content that is rendered
+        output, or that strips the page's block markup, is refused.
     """
     return await update_page(
         page_id=page_id,
@@ -468,6 +540,36 @@ async def wordpress_update_page(
         template=template,
         featured_media=featured_media,
         date=date,
+        expected_version=expected_version,
+    )
+
+
+@mcp.tool()
+async def wordpress_edit_page(
+    page_id: PositiveId,
+    old_text: str,
+    new_text: str,
+    expected_version: str | None = None,
+    replace_all: bool = False,
+) -> dict[str, Any]:
+    """Replace text in a WordPress page's source, without resending the page.
+
+    Args:
+        page_id: Page ID
+        old_text: Exact text from get_page's content to replace; must occur exactly once
+        new_text: Replacement text
+        expected_version: Refuse the edit unless the page is still at this version (get_page)
+        replace_all: Replace every occurrence instead of requiring exactly one
+
+    Returns:
+        The page's id, title, status, new version and link, and replacements made
+    """
+    return await edit_page(
+        page_id=page_id,
+        old_text=old_text,
+        new_text=new_text,
+        expected_version=expected_version,
+        replace_all=replace_all,
     )
 
 
