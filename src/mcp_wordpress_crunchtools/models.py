@@ -66,7 +66,7 @@ class EditInput(BaseModel):
     old_text: str = Field(..., min_length=1, description="Exact source text to replace")
     new_text: str = Field(..., description="Replacement text")
     expected_version: str | None = Field(
-        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+        default=None, max_length=64, description="The version a read returned"
     )
     replace_all: bool = Field(default=False, description="Replace every occurrence")
 
@@ -118,7 +118,7 @@ class PostUpdateInput(BaseModel):
     featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
     date: str | None = Field(default=None, description="Publication date (ISO 8601)")
     expected_version: str | None = Field(
-        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+        default=None, max_length=64, description="The version a read returned"
     )
     format: str | None = Field(default=None, description="Post format")
 
@@ -167,7 +167,7 @@ class PageUpdateInput(BaseModel):
     featured_media: int | None = Field(default=None, ge=0, description="Featured image media ID")
     date: str | None = Field(default=None, description="Publication date (ISO 8601)")
     expected_version: str | None = Field(
-        default=None, max_length=64, description="The version (modified_gmt) a read returned"
+        default=None, max_length=64, description="The version a read returned"
     )
 
 

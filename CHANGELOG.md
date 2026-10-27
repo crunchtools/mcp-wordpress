@@ -14,7 +14,8 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
   refuses any post that is not a draft or pending, and its write keeps that status.
 - `expected_version` on the post and page update and edit tools: when given, the write is
   refused if the item changed since it was read. `get_post` and `get_page` return the
-  `version` (`modified_gmt`) to pass.
+  `version` to pass: a hash of `modified_gmt` and the raw title, content and excerpt, so
+  two writes inside the same second are still told apart.
 
 ### Changed
 - `get_post`, `get_page` and `get_revision` return the saved source (`context=edit`):

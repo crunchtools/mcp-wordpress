@@ -24,7 +24,7 @@ from typing import Any
 from ..client import get_client
 from ..errors import ValidationError
 from ..models import EditInput, validate_positive_id
-from .formatting import get_source
+from .formatting import get_source, source_version
 
 # Statuses that have never been public. edit_draft refuses anything else.
 DRAFT_STATUSES = frozenset({"draft", "pending"})
@@ -48,16 +48,16 @@ def summary(item: dict[str, Any]) -> dict[str, Any]:
         "id": item.get("id"),
         "title": get_source(item.get("title")),
         "status": item.get("status"),
-        "version": item.get("modified_gmt"),
+        "version": source_version(item),
         "link": item.get("link"),
     }
 
 
 def check_version(current: dict[str, Any], expected: str | None) -> None:
     """Refuse a write against a copy that is no longer current."""
-    if expected is not None and current.get("modified_gmt") != expected:
+    if expected is not None and source_version(current) != expected:
         raise ValidationError(
-            f"Changed since it was read (version {current.get('modified_gmt')}, "
+            f"Changed since it was read (version {source_version(current)}, "
             f"expected {expected}). Read it again and redo the edit."
         )
 

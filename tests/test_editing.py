@@ -16,6 +16,7 @@ from mcp_wordpress_crunchtools.tools import (
     update_page,
     update_post,
 )
+from mcp_wordpress_crunchtools.tools.formatting import source_version
 from tests.conftest import _mock_wp_response, _patch_wp_client
 
 SOURCE = (
@@ -26,10 +27,10 @@ RENDERED = (
     '<p>[SERIES NOTE: old]</p>\n<div id="ez-toc-container">TOC</div>\n'
     '<h2><span class="ez-toc-section" id="a"></span>A</h2>\n<p>Body text.</p>'
 )
-VERSION = "2026-10-27T15:27:35"
+MODIFIED = "2026-10-27T15:27:35"
 
 
-def _item(status: str = "draft", content: str = SOURCE, version: str = VERSION) -> dict[str, Any]:
+def _item(status: str = "draft", content: str = SOURCE, version: str = MODIFIED) -> dict[str, Any]:
     """A post or page as WordPress returns it with context=edit."""
     return {
         "id": 6489,
@@ -48,6 +49,9 @@ def _item(status: str = "draft", content: str = SOURCE, version: str = VERSION) 
         "featured_media": 0,
         "format": "standard",
     }
+
+
+VERSION = source_version(_item())
 
 
 def _sent(mock: Any, call: int) -> dict[str, Any]:
@@ -104,7 +108,10 @@ class TestEditPost:
             )
         assert _sent(mock, 1)["json"] == {"content": edited}
         assert result["post"]["replacements"] == 1
-        assert result["post"]["version"] == "2026-10-27T16:00:00"
+        assert result["post"]["version"] == source_version(
+            _item(content=edited, version="2026-10-27T16:00:00")
+        )
+        assert result["post"]["version"] != VERSION
         assert "content" not in result["post"]
 
     @pytest.mark.asyncio
@@ -163,6 +170,14 @@ class TestEditPost:
             result = await edit_page(6489, "Body text.", "New body.")
         assert result["page"]["replacements"] == 1
         assert "/pages/6489" in str(_sent(mock, 1)["url"])
+
+
+class TestVersion:
+    def test_same_second_content_change_is_a_new_version(self) -> None:
+        assert source_version(_item(content=SOURCE + "x")) != VERSION
+
+    def test_same_source_is_the_same_version(self) -> None:
+        assert source_version(_item()) == VERSION
 
 
 class TestEditDraft:

@@ -8,7 +8,7 @@ from typing import Any
 from ..client import get_client
 from ..models import PostInput, PostUpdateInput, validate_positive_id
 from .editing import edit_source, guarded_update
-from .formatting import add_embedded_author, format_common, get_rendered, get_source
+from .formatting import add_embedded_author, format_common, get_rendered, get_source, source_version
 
 
 async def list_posts(
@@ -456,6 +456,7 @@ def _format_post(post: dict[str, Any], include_content: bool = False) -> dict[st
 
     if include_content:
         formatted["content"] = get_source(post.get("content"))
+        formatted["version"] = source_version(post)
 
     add_embedded_author(formatted, post)
     return formatted
