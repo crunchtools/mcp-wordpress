@@ -57,7 +57,7 @@ PositiveId = Annotated[int, Field(ge=1)]
 # Create the FastMCP server
 mcp = FastMCP(
     name="mcp-wordpress-crunchtools",
-    version="0.8.0",
+    version="0.8.1",
     instructions=(
         "Secure MCP server for WordPress content management. "
         "For media uploads: when running as a container, files must be placed in "
