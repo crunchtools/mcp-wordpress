@@ -59,7 +59,5 @@ async def _patch_wp_client(
     else:
         mock_method.return_value = _mock_wp_response()
 
-    with patch.dict(os.environ, env, clear=True), patch(
-        f"httpx.AsyncClient.{method}", mock_method
-    ):
+    with patch.dict(os.environ, env, clear=True), patch(f"httpx.AsyncClient.{method}", mock_method):
         yield mock_method
