@@ -5,6 +5,7 @@ The Educated Confusion instance failed every call with a bare
 does not distinguish a site that is down from a base URL that redirects.
 """
 
+import logging
 import os
 from importlib.metadata import version
 from unittest.mock import patch
@@ -236,3 +237,45 @@ class TestOversizeResponses:
         message = str(exc_info.value)
         assert message.endswith("...")
         assert len(message) < 600
+
+
+class TestCredentialsInTheUrl:
+    """A password in WORDPRESS_URL never reaches a log line or an error."""
+
+    def test_userinfo_is_dropped_from_the_base_url(self) -> None:
+        env = {
+            "WORDPRESS_URL": "https://admin:s3cret@wp.example.com",
+            "WORDPRESS_USERNAME": "u",
+            "WORDPRESS_APP_PASSWORD": "p",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = Config()
+
+        assert config.base_url == "https://wp.example.com"
+        assert "s3cret" not in config.base_url
+        assert "s3cret" not in config.api_base_url
+        assert "s3cret" not in repr(config)
+
+    def test_userinfo_is_dropped_from_the_https_upgrade_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env = {
+            "WORDPRESS_URL": "http://admin:s3cret@wp.example.com:8080",
+            "WORDPRESS_USERNAME": "u",
+            "WORDPRESS_APP_PASSWORD": "p",
+        }
+        with patch.dict(os.environ, env, clear=True), caplog.at_level(logging.WARNING):
+            config = Config()
+
+        assert config.base_url == "https://wp.example.com:8080"
+        assert "s3cret" not in caplog.text
+        assert "wp.example.com:8080" in caplog.text
+
+    def test_an_invalid_port_is_refused(self) -> None:
+        env = {
+            "WORDPRESS_URL": "https://wp.example.com:notaport",
+            "WORDPRESS_USERNAME": "u",
+            "WORDPRESS_APP_PASSWORD": "p",
+        }
+        with patch.dict(os.environ, env, clear=True), pytest.raises(ConfigurationError):
+            Config()

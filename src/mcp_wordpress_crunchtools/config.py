@@ -6,7 +6,7 @@ Credentials are stored as SecretStr to prevent accidental logging.
 
 import logging
 import os
-from urllib.parse import urlparse
+from urllib.parse import SplitResult, urlsplit
 
 from pydantic import SecretStr
 
@@ -15,15 +15,25 @@ from .errors import ConfigurationError
 logger = logging.getLogger(__name__)
 
 
-LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
-def _is_local_host(netloc: str) -> bool:
-    """True for a loopback netloc, where plain http is acceptable."""
-    netloc = netloc.rsplit("@", maxsplit=1)[-1]
-    # An IPv6 literal is bracketed, so the port is whatever follows the "]".
-    host = netloc.partition("]")[0] + "]" if netloc.startswith("[") else netloc.partition(":")[0]
-    return host.lower() in LOCAL_HOSTS
+def _authority(parsed: SplitResult) -> str:
+    """Host and port, with any ``user:password@`` dropped.
+
+    The base URL is quoted back in log lines and error messages, so a
+    credential someone put in ``WORDPRESS_URL`` must not survive into it.
+    Credentials belong in ``WORDPRESS_USERNAME`` and
+    ``WORDPRESS_APP_PASSWORD``, where they are held as a ``SecretStr``.
+    """
+    host = parsed.hostname or ""
+    if ":" in host:  # an IPv6 literal, which a URL writes in brackets
+        host = f"[{host}]"
+    try:
+        port = parsed.port
+    except ValueError as e:
+        raise ConfigurationError(f"WORDPRESS_URL has an invalid port: {e}") from e
+    return host if port is None else f"{host}:{port}"
 
 
 class Config:
@@ -46,29 +56,29 @@ class Config:
                 "WORDPRESS_URL environment variable required. Example: https://example.com"
             )
 
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
+        parsed = urlsplit(url)
+        authority = _authority(parsed)
+        if not parsed.scheme or not authority:
             raise ConfigurationError(
                 "WORDPRESS_URL must be a valid URL (e.g., https://example.com)"
             )
 
-        # Force HTTPS everywhere but a local development site. A plain-http
-        # base URL sends the application password in the clear, and every
-        # hosted WordPress answers http with an HTML 301 to https, which the
-        # client then fails to parse as JSON (RT #1596). Upgrading the scheme
-        # is both the safe and the working choice, so do it rather than warn.
+        # Force HTTPS everywhere but a local development site: a plain-http
+        # base URL sends the application password in the clear. Upgrading the
+        # scheme is both the safe and the working choice, so do it rather than
+        # warn and carry on.
         scheme = parsed.scheme
-        if scheme != "https" and not _is_local_host(parsed.netloc):
+        if scheme != "https" and (parsed.hostname or "") not in LOCAL_HOSTS:
             logger.warning(
                 "WORDPRESS_URL uses %s://%s; upgrading to https so the "
                 "application password is not sent in the clear",
                 scheme,
-                parsed.netloc,
+                authority,
             )
             scheme = "https"
 
         # Store normalized base URL (without trailing slash)
-        self._base_url = f"{scheme}://{parsed.netloc}".rstrip("/")
+        self._base_url = f"{scheme}://{authority}".rstrip("/")
 
         # WordPress username
         username = os.environ.get("WORDPRESS_USERNAME")
