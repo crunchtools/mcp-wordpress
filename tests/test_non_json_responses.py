@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_wordpress_crunchtools.client import USER_AGENT, get_client
+from mcp_wordpress_crunchtools.client import MAX_RESPONSE_SIZE, USER_AGENT, get_client
 from mcp_wordpress_crunchtools.config import Config
 from mcp_wordpress_crunchtools.errors import ConfigurationError, WordPressApiError
 from mcp_wordpress_crunchtools.tools import list_posts
@@ -202,3 +202,37 @@ class TestUserAgent:
     def test_the_user_agent_carries_the_installed_version(self) -> None:
         installed = version("mcp-wordpress-crunchtools")
         assert f"mcp-wordpress-crunchtools/{installed}" in USER_AGENT
+
+
+class TestOversizeResponses:
+    """An oversize reply names the site and URL like every other failure."""
+
+    @pytest.mark.asyncio
+    async def test_too_large_names_the_url_and_the_sizes(self) -> None:
+        response = _mock_raw_response(
+            status_code=200,
+            body=b"{}",
+            content_type="application/json",
+            headers={"content-length": str(50 * 1024 * 1024)},
+        )
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert "response_too_large" in message
+        assert "GET https://wp.example.com/wp-json/wp/v2/posts" in message
+        assert str(MAX_RESPONSE_SIZE) in message
+
+    @pytest.mark.asyncio
+    async def test_a_megabyte_html_body_is_still_a_short_message(self) -> None:
+        """The snippet is built from a bounded prefix, not the whole body."""
+        body = b"<html>" + b"<div>filler</div>" * 100_000 + b"</html>"
+        response = _mock_raw_response(status_code=200, body=body)
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert message.endswith("...")
+        assert len(message) < 600

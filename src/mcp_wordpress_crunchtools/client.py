@@ -63,10 +63,15 @@ def _body_snippet(response: httpx.Response) -> str:
         text = response.text
     except (UnicodeDecodeError, httpx.ResponseNotRead):
         return "<unreadable body>"
-    collapsed = " ".join(text.split())
+    # Normalise a bounded prefix rather than the whole body. A WAF page or a
+    # proxy error can be megabytes, and collapsing all of it only to keep the
+    # first 200 characters would copy it twice for nothing. Four times the
+    # snippet is enough slack for the whitespace a collapse removes.
+    prefix = text[: BODY_SNIPPET_CHARS * 4]
+    collapsed = " ".join(prefix.split())
     if not collapsed:
         return "<empty body>"
-    if len(collapsed) > BODY_SNIPPET_CHARS:
+    if len(collapsed) > BODY_SNIPPET_CHARS or len(text) > len(prefix):
         return collapsed[:BODY_SNIPPET_CHARS] + "..."
     return collapsed
 
@@ -199,7 +204,11 @@ class WordPressClient:
         """
         content_length = response.headers.get("content-length")
         if content_length and int(content_length) > MAX_RESPONSE_SIZE:
-            raise WordPressApiError("response_too_large", "Response too large")
+            raise WordPressApiError(
+                "response_too_large",
+                f"{_where(method, response)} returned {content_length} bytes, "
+                f"over the {MAX_RESPONSE_SIZE} byte limit.",
+            )
 
         # A redirect is never a WordPress REST answer, and its HTML body is
         # what used to surface as "invalid JSON" with nothing to act on.
