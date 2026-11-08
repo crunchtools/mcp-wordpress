@@ -8,6 +8,37 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-08
+
+### Fixed
+
+- The client now identifies itself as
+  `mcp-wordpress-crunchtools/<version>` instead of letting httpx send
+  `python-httpx/<version>`. Cloudflare's bot protection answers the default
+  library user agent with an HTML challenge page rather than the REST API,
+  which is why every call against the Educated Confusion site failed while
+  the site itself was healthy and a second site on the same server worked
+  (RT #1596).
+- A reply that is not JSON now says which site and URL produced it, what
+  status came back and what content type, with a short excerpt of the body.
+  The old message was the bare decoder text, `Invalid JSON response:
+  Expecting value: line 1 column 1 (char 0)`, which could not tell a site
+  that is down from a site that is answering with something other than JSON.
+- A redirect is reported as `unexpected_redirect`, naming the Location and
+  the configured `WORDPRESS_URL`, instead of being parsed as JSON. Redirects
+  are still not followed: this client carries a Basic Auth header that must
+  not be forwarded to another host.
+- An HTML error page now reports its HTTP status (`http_error`) rather than
+  `invalid_json`.
+
+### Security
+
+- `WORDPRESS_URL` set to plain `http` off loopback is upgraded to `https`
+  instead of only logging a warning, so the application password is never
+  sent in the clear. Loopback URLs keep http, and the loopback test is now
+  an exact host match, so a host merely containing `localhost` is no longer
+  treated as local.
+
 ## [0.8.1] - 2026-10-31
 
 ### Security

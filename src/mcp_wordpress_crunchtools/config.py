@@ -15,6 +15,17 @@ from .errors import ConfigurationError
 logger = logging.getLogger(__name__)
 
 
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
+
+
+def _is_local_host(netloc: str) -> bool:
+    """True for a loopback netloc, where plain http is acceptable."""
+    netloc = netloc.rsplit("@", maxsplit=1)[-1]
+    # An IPv6 literal is bracketed, so the port is whatever follows the "]".
+    host = netloc.partition("]")[0] + "]" if netloc.startswith("[") else netloc.partition(":")[0]
+    return host.lower() in LOCAL_HOSTS
+
+
 class Config:
     """Secure configuration handling.
 
@@ -41,12 +52,23 @@ class Config:
                 "WORDPRESS_URL must be a valid URL (e.g., https://example.com)"
             )
 
-        # Force HTTPS in production
-        if parsed.scheme != "https" and "localhost" not in parsed.netloc:
-            logger.warning("WORDPRESS_URL should use HTTPS for security")
+        # Force HTTPS everywhere but a local development site. A plain-http
+        # base URL sends the application password in the clear, and every
+        # hosted WordPress answers http with an HTML 301 to https, which the
+        # client then fails to parse as JSON (RT #1596). Upgrading the scheme
+        # is both the safe and the working choice, so do it rather than warn.
+        scheme = parsed.scheme
+        if scheme != "https" and not _is_local_host(parsed.netloc):
+            logger.warning(
+                "WORDPRESS_URL uses %s://%s; upgrading to https so the "
+                "application password is not sent in the clear",
+                scheme,
+                parsed.netloc,
+            )
+            scheme = "https"
 
         # Store normalized base URL (without trailing slash)
-        self._base_url = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+        self._base_url = f"{scheme}://{parsed.netloc}".rstrip("/")
 
         # WordPress username
         username = os.environ.get("WORDPRESS_USERNAME")
