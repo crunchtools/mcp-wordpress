@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
-def _authority(parsed: SplitResult) -> str:
-    """Host and port, with any ``user:password@`` dropped.
+HTTP_PORT = 80
+
+
+def _host(parsed: SplitResult) -> str:
+    """The host as a URL writes it, with any ``user:password@`` dropped.
 
     The base URL is quoted back in log lines and error messages, so a
     credential someone put in ``WORDPRESS_URL`` must not survive into it.
@@ -28,11 +31,20 @@ def _authority(parsed: SplitResult) -> str:
     """
     host = parsed.hostname or ""
     if ":" in host:  # an IPv6 literal, which a URL writes in brackets
-        host = f"[{host}]"
+        return f"[{host}]"
+    return host
+
+
+def _port(parsed: SplitResult) -> int | None:
+    """The port, or None when the URL names none."""
     try:
-        port = parsed.port
+        return parsed.port
     except ValueError as e:
         raise ConfigurationError(f"WORDPRESS_URL has an invalid port: {e}") from e
+
+
+def _authority(host: str, port: int | None) -> str:
+    """A URL authority from its parts."""
     return host if port is None else f"{host}:{port}"
 
 
@@ -57,8 +69,9 @@ class Config:
             )
 
         parsed = urlsplit(url)
-        authority = _authority(parsed)
-        if not parsed.scheme or not authority:
+        host = _host(parsed)
+        port = _port(parsed)
+        if not parsed.scheme or not host:
             raise ConfigurationError(
                 "WORDPRESS_URL must be a valid URL (e.g., https://example.com)"
             )
@@ -69,16 +82,21 @@ class Config:
         # warn and carry on.
         scheme = parsed.scheme
         if scheme != "https" and (parsed.hostname or "") not in LOCAL_HOSTS:
+            given = _authority(host, port)
+            if port == HTTP_PORT:
+                # Nothing serves TLS on the plain-http port. Any other port is
+                # kept, since a site may well serve https on one.
+                port = None
             logger.warning(
                 "WORDPRESS_URL uses %s://%s; upgrading to https so the "
                 "application password is not sent in the clear",
                 scheme,
-                authority,
+                given,
             )
             scheme = "https"
 
         # Store normalized base URL (without trailing slash)
-        self._base_url = f"{scheme}://{authority}".rstrip("/")
+        self._base_url = f"{scheme}://{_authority(host, port)}".rstrip("/")
 
         # WordPress username
         username = os.environ.get("WORDPRESS_USERNAME")

@@ -60,18 +60,19 @@ BODY_SNIPPET_CHARS = 200
 def _body_snippet(response: httpx.Response) -> str:
     """A short, single-line excerpt of a response body, for an error message."""
     try:
-        text = response.text
-    except (UnicodeDecodeError, httpx.ResponseNotRead):
+        body = response.content
+    except httpx.ResponseNotRead:
         return "<unreadable body>"
-    # Normalise a bounded prefix rather than the whole body. A WAF page or a
-    # proxy error can be megabytes, and collapsing all of it only to keep the
-    # first 200 characters would copy it twice for nothing. Four times the
-    # snippet is enough slack for the whitespace a collapse removes.
-    prefix = text[: BODY_SNIPPET_CHARS * 4]
-    collapsed = " ".join(prefix.split())
+    # Slice the bytes, then decode and normalise only that. A WAF page or a
+    # proxy error can be megabytes, and decoding all of it to keep the first
+    # 200 characters would copy it twice for nothing. Four times the snippet is
+    # enough slack for the whitespace a collapse removes. `replace` covers the
+    # multi-byte character the slice may cut in half.
+    prefix = body[: BODY_SNIPPET_CHARS * 4]
+    collapsed = " ".join(prefix.decode("utf-8", errors="replace").split())
     if not collapsed:
         return "<empty body>"
-    if len(collapsed) > BODY_SNIPPET_CHARS or len(text) > len(prefix):
+    if len(collapsed) > BODY_SNIPPET_CHARS or len(body) > len(prefix):
         return collapsed[:BODY_SNIPPET_CHARS] + "..."
     return collapsed
 

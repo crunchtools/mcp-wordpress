@@ -274,6 +274,31 @@ class TestCredentialsInTheUrl:
         )
         warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
         assert warnings == [expected]
+        # Any level, not just WARNING: a leak at DEBUG is still a leak.
+        assert "s3cret" not in caplog.text
+
+    def test_an_explicit_port_80_is_dropped_by_the_upgrade(self) -> None:
+        """Nothing serves TLS on the plain-http port."""
+        env = {
+            "WORDPRESS_URL": "http://wp.example.com:80",
+            "WORDPRESS_USERNAME": "u",
+            "WORDPRESS_APP_PASSWORD": "p",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = Config()
+
+        assert config.base_url == "https://wp.example.com"
+
+    def test_a_nonstandard_port_survives_the_upgrade(self) -> None:
+        env = {
+            "WORDPRESS_URL": "http://wp.example.com:8443",
+            "WORDPRESS_USERNAME": "u",
+            "WORDPRESS_APP_PASSWORD": "p",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = Config()
+
+        assert config.base_url == "https://wp.example.com:8443"
 
     def test_an_invalid_port_is_refused(self) -> None:
         env = {
