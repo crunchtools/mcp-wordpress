@@ -5,6 +5,7 @@ All requests go through this client to ensure consistent security practices.
 """
 
 import base64
+import json
 import logging
 from importlib.metadata import version
 from typing import Any
@@ -57,12 +58,8 @@ _NOT_FOUND_BY_COLLECTION = {
 BODY_SNIPPET_CHARS = 200
 
 
-def _body_snippet(response: httpx.Response) -> str:
+def _body_snippet(body: bytes) -> str:
     """A short, single-line excerpt of a response body, for an error message."""
-    try:
-        body = response.content
-    except httpx.ResponseNotRead:
-        return "<unreadable body>"
     # Slice the bytes, then decode and normalise only that. A WAF page or a
     # proxy error can be megabytes, and decoding all of it to keep the first
     # 200 characters would copy it twice for nothing. Four times the snippet is
@@ -181,14 +178,21 @@ class WordPressClient:
             # For file uploads, let httpx set multipart Content-Type with boundary
             request_kwargs["files"] = files
 
+        # Stream the reply rather than letting httpx buffer it, so the size
+        # limit holds for a chunked body that declares no Content-Length.
         try:
-            response = await client.request(**request_kwargs)
+            request = client.build_request(**request_kwargs)
+            response = await client.send(request, stream=True)
+            try:
+                body = await self._read_body(method, response)
+            finally:
+                await response.aclose()
         except httpx.TimeoutException as e:
             raise WordPressApiError("timeout", f"Request timeout: {e}") from e
         except httpx.RequestError as e:
             raise WordPressApiError("request_failed", f"Request failed: {e}") from e
 
-        payload = self._payload(method, response)
+        payload = self._payload(method, response, body)
 
         # Handle error responses
         if not response.is_success:
@@ -196,12 +200,12 @@ class WordPressClient:
 
         return payload
 
-    def _payload(self, method: str, response: httpx.Response) -> dict[str, Any] | list[Any]:
-        """The decoded JSON body, or an error saying what came back instead.
+    async def _read_body(self, method: str, response: httpx.Response) -> bytes:
+        """The response body, refused as soon as it passes MAX_RESPONSE_SIZE.
 
-        Every failure here names the site, the URL and the status, because a
-        bare decode error cannot tell a site that is down from a base URL
-        that redirects (RT #1596).
+        The Content-Length check is a cheap early exit for a site that is
+        honest about the size; the running count is what enforces the limit,
+        because a chunked reply sends no such header (#75).
         """
         content_length = response.headers.get("content-length")
         if content_length and int(content_length) > MAX_RESPONSE_SIZE:
@@ -211,6 +215,26 @@ class WordPressClient:
                 f"over the {MAX_RESPONSE_SIZE} byte limit.",
             )
 
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body += chunk
+            if len(body) > MAX_RESPONSE_SIZE:
+                raise WordPressApiError(
+                    "response_too_large",
+                    f"{_where(method, response)} returned more than "
+                    f"{MAX_RESPONSE_SIZE} bytes, over the byte limit.",
+                )
+        return bytes(body)
+
+    def _payload(
+        self, method: str, response: httpx.Response, body: bytes
+    ) -> dict[str, Any] | list[Any]:
+        """The decoded JSON body, or an error saying what came back instead.
+
+        Every failure here names the site, the URL and the status, because a
+        bare decode error cannot tell a site that is down from a base URL
+        that redirects (RT #1596).
+        """
         # A redirect is never a WordPress REST answer, and its HTML body is
         # what used to surface as "invalid JSON" with nothing to act on.
         # Redirects are not followed, because this client carries a Basic Auth
@@ -226,12 +250,12 @@ class WordPressClient:
             )
 
         try:
-            payload: dict[str, Any] | list[Any] = response.json()
+            payload: dict[str, Any] | list[Any] = json.loads(body)
         except ValueError as e:
             content_type = response.headers.get("content-type", "<none>")
             detail = (
                 f"{_where(method, response)} returned {content_type}, "
-                f"not JSON: {_body_snippet(response)}"
+                f"not JSON: {_body_snippet(body)}"
             )
             if not response.is_success:
                 raise WordPressApiError("http_error", detail) from e

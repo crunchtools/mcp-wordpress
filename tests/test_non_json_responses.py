@@ -5,11 +5,14 @@ The Educated Confusion instance failed every call with a bare
 does not distinguish a site that is down from a base URL that redirects.
 """
 
+import json
 import logging
 import os
+from collections.abc import AsyncIterator
 from importlib.metadata import version
 from unittest.mock import patch
 
+import httpx
 import pytest
 
 from mcp_wordpress_crunchtools.client import MAX_RESPONSE_SIZE, USER_AGENT, get_client
@@ -224,6 +227,61 @@ class TestOversizeResponses:
         assert "response_too_large" in message
         assert "GET https://wp.example.com/wp-json/wp/v2/posts" in message
         assert str(MAX_RESPONSE_SIZE) in message
+
+    @pytest.mark.asyncio
+    async def test_chunked_reply_over_the_limit_is_refused_mid_stream(self) -> None:
+        """A chunked reply declares no size, so the read itself enforces it (#75)."""
+        chunk = b" " * (1024 * 1024)
+        total_chunks = 2 * MAX_RESPONSE_SIZE // len(chunk)
+        sent = 0
+
+        async def chunked_body() -> AsyncIterator[bytes]:
+            nonlocal sent
+            for _ in range(total_chunks):
+                sent += 1
+                yield chunk
+
+        response = httpx.Response(
+            200,
+            content=chunked_body(),
+            headers={"content-type": "application/json"},
+            request=httpx.Request("GET", "https://wp.example.com/wp-json/wp/v2/posts"),
+        )
+        assert "content-length" not in response.headers
+
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert "response_too_large" in message
+        assert "GET https://wp.example.com/wp-json/wp/v2/posts" in message
+        assert "HTTP 200" in message
+        assert str(MAX_RESPONSE_SIZE) in message
+        # Refused one chunk past the limit, not after the whole body arrived.
+        assert sent == MAX_RESPONSE_SIZE // len(chunk) + 1
+        assert sent < total_chunks
+        assert response.is_closed
+
+    @pytest.mark.asyncio
+    async def test_chunked_reply_under_the_limit_is_parsed(self) -> None:
+        posts = [{"id": 1, "title": {"rendered": "One"}}]
+        encoded = json.dumps(posts).encode()
+
+        async def chunked_body() -> AsyncIterator[bytes]:
+            for i in range(0, len(encoded), 7):
+                yield encoded[i : i + 7]
+
+        response = httpx.Response(
+            200,
+            content=chunked_body(),
+            headers={"content-type": "application/json"},
+            request=httpx.Request("GET", "https://wp.example.com/wp-json/wp/v2/posts"),
+        )
+        async with _patch_wp_client(response=response):
+            result = await list_posts(per_page=5)
+
+        assert result["posts"][0]["id"] == 1
 
     @pytest.mark.asyncio
     async def test_a_megabyte_html_body_is_still_a_short_message(self) -> None:

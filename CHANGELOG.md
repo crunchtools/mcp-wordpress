@@ -8,6 +8,13 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+### Security
+
+- The 10 MB response limit now holds for every reply, not only for one that
+  declares a `Content-Length`. The body is streamed and counted as it
+  arrives, and a chunked reply is refused as `response_too_large` the moment
+  it passes the limit, instead of being read whole into memory first (#75).
+
 ## [0.8.2] - 2026-11-08
 
 ### Fixed
