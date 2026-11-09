@@ -74,9 +74,29 @@ def _body_snippet(body: bytes) -> str:
     return collapsed
 
 
+# Query parameters whose value is a secret rather than part of the request.
+# WordPress takes `password` on a protected post and `_wpnonce` on some routes;
+# everything else in a REST query -- `per_page`, `search`, `status` -- is the
+# diagnosis, so this redacts by name instead of dropping the query string.
+REDACTED_PARAMS = frozenset({"_wpnonce", "password", "token"})
+
+
+def _safe_url(url: httpx.URL) -> httpx.URL:
+    """A URL fit to appear in an error message (Layer 1).
+
+    Userinfo goes first: `WORDPRESS_URL=https://user:password@site` is accepted
+    by the config and carries its secret before the path, where redacting query
+    parameters never reaches it.
+    """
+    url = url.copy_with(userinfo=b"")
+    for name in REDACTED_PARAMS & set(url.params):
+        url = url.copy_set_param(name, "***")
+    return url
+
+
 def _where(method: str, response: httpx.Response) -> str:
     """Which site and URL a response came from, for an error message."""
-    return f"{method} {response.request.url} (HTTP {response.status_code})"
+    return f"{method} {_safe_url(response.request.url)} (HTTP {response.status_code})"
 
 
 def _not_found_error(path: str) -> UserError | None:
@@ -208,22 +228,30 @@ class WordPressClient:
         because a chunked reply sends no such header (#75).
         """
         content_length = response.headers.get("content-length")
-        if content_length and int(content_length) > MAX_RESPONSE_SIZE:
+        # `.isdigit()` because the header is whatever the far end sent: an
+        # unguarded `int()` turns a malformed value into a ValueError escaping
+        # as itself rather than an API error naming the site.
+        if content_length and content_length.isdigit() and int(content_length) > MAX_RESPONSE_SIZE:
             raise WordPressApiError(
                 "response_too_large",
                 f"{_where(method, response)} returned {content_length} bytes, "
                 f"over the {MAX_RESPONSE_SIZE} byte limit.",
             )
 
+        # The length is checked BEFORE the chunk is copied in. `aiter_bytes()`
+        # yields whatever the stream produces, which is not a bounded size -- a
+        # single chunk can be the whole body -- so appending first and measuring
+        # after would let exactly the response this refuses into memory on the
+        # way to refusing it.
         body = bytearray()
         async for chunk in response.aiter_bytes():
-            body += chunk
-            if len(body) > MAX_RESPONSE_SIZE:
+            if len(body) + len(chunk) > MAX_RESPONSE_SIZE:
                 raise WordPressApiError(
                     "response_too_large",
                     f"{_where(method, response)} returned more than "
                     f"{MAX_RESPONSE_SIZE} bytes, over the byte limit.",
                 )
+            body += chunk
         return bytes(body)
 
     def _payload(

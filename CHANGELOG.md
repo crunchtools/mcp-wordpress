@@ -8,6 +8,37 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-11-09
+
+### Security
+
+- **The URL in an error message carries no secret.** `WORDPRESS_URL` is
+  accepted with userinfo in it (`https://user:password@site`), and userinfo
+  sits before the path where redacting query parameters never reaches it. It
+  is now dropped, and `password` — a real WordPress query parameter on a
+  protected post — along with `_wpnonce` and `token` are redacted by name.
+  By name rather than by dropping the query string, because `per_page`,
+  `search` and `status` are the diagnosis the message exists to carry.
+
+### Fixed
+
+- A malformed `Content-Length` is no longer an unhandled `ValueError`. The
+  header is whatever the far end sent, and an unguarded `int()` on it escaped
+  as itself rather than as an API error naming the site.
+
+### Changed
+
+- The chunk is measured before it is copied into the buffer. `aiter_bytes()`
+  promises nothing about chunk size — a single chunk can be the whole body —
+  so appending first and measuring after copied in exactly the response the
+  cap exists to refuse, on the way to refusing it.
+
+- Inherits constitution v1.36.0, whose MCP Server profile 1.8.0 states the
+  outbound HTTP contract this repo already satisfies: #74 gave it the product
+  User-Agent, #75 (released in 0.8.3) the ceiling enforced while reading, and
+  both error paths already name the site, the URL and the status. It is the
+  worked example the rest of the fleet is being swept against (RT #1601).
+
 ## [0.8.3] - 2026-11-09
 
 ### Security
