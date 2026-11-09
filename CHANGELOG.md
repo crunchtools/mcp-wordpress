@@ -8,6 +8,8 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-11-09
+
 ### Security
 
 - The 10 MB response limit now holds for every reply, not only for one that
