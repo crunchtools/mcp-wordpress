@@ -41,7 +41,7 @@ def _mock_wp_response(
 
 @asynccontextmanager
 async def _patch_wp_client(
-    method: str = "request",
+    method: str = "send",
     response: httpx.Response | None = None,
     side_effect: list[httpx.Response] | None = None,
 ) -> AsyncIterator[AsyncMock]:
@@ -61,6 +61,21 @@ async def _patch_wp_client(
 
     with patch.dict(os.environ, env, clear=True), patch(f"httpx.AsyncClient.{method}", mock_method):
         yield mock_method
+
+
+def _sent_request(mock: AsyncMock, call: int) -> dict[str, Any]:
+    """What one request the client sent carried: method, url, params and json.
+
+    The client streams through ``AsyncClient.send``, so the mock receives the
+    built ``httpx.Request`` rather than the keyword arguments.
+    """
+    request: httpx.Request = mock.await_args_list[call].args[0]
+    return {
+        "method": request.method,
+        "url": request.url,
+        "params": dict(request.url.params),
+        "json": json.loads(request.content) if request.content else None,
+    }
 
 
 def _mock_raw_response(

@@ -223,7 +223,7 @@ class TestReadOnlyAnnotation:
             await mcp.call_tool(name, READ_ONLY_CALLS[name])
         assert request.await_count >= 1
         for call in request.await_args_list:
-            assert call.kwargs["method"] in {"GET", "HEAD"}
+            assert call.args[0].method in {"GET", "HEAD"}
 
 
 # Error Hierarchy Tests (preserved from original)

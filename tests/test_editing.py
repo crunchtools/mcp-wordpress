@@ -17,7 +17,7 @@ from mcp_wordpress_crunchtools.tools import (
     update_post,
 )
 from mcp_wordpress_crunchtools.tools.formatting import source_version
-from tests.conftest import _mock_wp_response, _patch_wp_client
+from tests.conftest import _mock_wp_response, _patch_wp_client, _sent_request
 
 SOURCE = (
     "<!-- wp:paragraph -->\n<p>[SERIES NOTE: old]</p>\n<!-- /wp:paragraph -->\n\n"
@@ -55,8 +55,8 @@ VERSION = source_version(_item())
 
 
 def _sent(mock: Any, call: int) -> dict[str, Any]:
-    """The keyword arguments of one request the client made."""
-    return dict(mock.call_args_list[call].kwargs)
+    """The method, url, params and json of one request the client made."""
+    return _sent_request(mock, call)
 
 
 class TestSourceReads:
