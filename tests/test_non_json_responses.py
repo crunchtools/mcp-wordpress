@@ -268,8 +268,12 @@ class TestCredentialsInTheUrl:
             config = Config()
 
         assert config.base_url == "https://wp.example.com:8080"
-        assert "s3cret" not in caplog.text
-        assert "wp.example.com:8080" in caplog.text
+        expected = (
+            "WORDPRESS_URL uses http://wp.example.com:8080; upgrading to https "
+            "so the application password is not sent in the clear"
+        )
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [expected]
 
     def test_an_invalid_port_is_refused(self) -> None:
         env = {
