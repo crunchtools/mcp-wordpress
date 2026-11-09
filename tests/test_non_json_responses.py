@@ -400,3 +400,49 @@ class TestUndecodableBodies:
         message = str(exc_info.value)
         assert "�" in message
         assert "blocked" in message
+
+
+class TestErrorRedaction:
+    """Layer 1 applies to an error message: the URL in it carries no secret."""
+
+    @pytest.mark.asyncio
+    async def test_userinfo_and_credential_params_are_redacted(self) -> None:
+        """`WORDPRESS_URL=https://user:password@site` is accepted, and secret.
+
+        Userinfo sits before the path, where redacting query parameters never
+        reaches it, and `password` is a real WordPress query parameter on a
+        protected post.
+        """
+        response = _mock_raw_response(
+            status_code=403,
+            body=b"<html><title>Attention Required!</title></html>",
+            url="https://bot:sekrit@wp.example.com/wp-json/wp/v2/posts?password=p0st&per_page=5",
+        )
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert "sekrit" not in message
+        assert "p0st" not in message
+        # What is left is still the diagnosis: the host, the path, the real
+        # parameter and what came back.
+        assert "wp.example.com/wp-json/wp/v2/posts" in message
+        assert "per_page=5" in message
+        assert "Attention Required!" in message
+
+    @pytest.mark.asyncio
+    async def test_a_malformed_content_length_is_an_api_error(self) -> None:
+        """An unguarded `int()` on a header the far end chose is a ValueError."""
+        response = _mock_raw_response(
+            status_code=200,
+            body=json.dumps([]).encode(),
+            content_type="application/json",
+            headers={"content-length": "not-a-number"},
+        )
+        async with _patch_wp_client(response=response):
+            result = await list_posts(per_page=5)
+
+        # The malformed header is ignored and the body is read under the running
+        # count, rather than the call dying on a ValueError from `int()`.
+        assert result["posts"] == []
