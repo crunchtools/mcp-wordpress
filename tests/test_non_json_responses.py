@@ -308,3 +308,37 @@ class TestCredentialsInTheUrl:
         }
         with patch.dict(os.environ, env, clear=True), pytest.raises(ConfigurationError):
             Config()
+
+
+class TestUndecodableBodies:
+    """The snippet slices bytes, so it has to survive a split character."""
+
+    @pytest.mark.asyncio
+    async def test_a_multibyte_character_split_by_the_slice(self) -> None:
+        # One ASCII byte then three-byte characters, so the byte boundary
+        # cannot land on a character boundary.
+        body = b"<" + "€".encode() * 5000
+        response = _mock_raw_response(status_code=200, body=body)
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert message.endswith("...")
+        assert "€" in message
+        assert len(message) < 600
+
+    @pytest.mark.asyncio
+    async def test_a_body_that_is_not_utf8_at_all(self) -> None:
+        response = _mock_raw_response(
+            status_code=200,
+            body=b"<html>\xff\xfe\xff blocked</html>",
+            content_type="text/html; charset=windows-1252",
+        )
+        async with _patch_wp_client(response=response):
+            with pytest.raises(WordPressApiError) as exc_info:
+                await list_posts(per_page=5)
+
+        message = str(exc_info.value)
+        assert "�" in message
+        assert "blocked" in message
