@@ -61,3 +61,22 @@ async def _patch_wp_client(
 
     with patch.dict(os.environ, env, clear=True), patch(f"httpx.AsyncClient.{method}", mock_method):
         yield mock_method
+
+
+def _mock_raw_response(
+    status_code: int = 200,
+    body: bytes = b"",
+    content_type: str = "text/html; charset=UTF-8",
+    headers: dict[str, str] | None = None,
+    url: str = "https://wp.example.com/wp-json/wp/v2/posts",
+) -> httpx.Response:
+    """Build a mock response whose body is not JSON (HTML redirect, WAF page)."""
+    all_headers = {"content-type": content_type}
+    if headers:
+        all_headers.update(headers)
+    return httpx.Response(
+        status_code,
+        content=body,
+        headers=all_headers,
+        request=httpx.Request("GET", url),
+    )

@@ -6,6 +6,7 @@ All requests go through this client to ensure consistent security practices.
 
 import base64
 import logging
+from importlib.metadata import version
 from typing import Any
 
 import httpx
@@ -30,6 +31,16 @@ MAX_RESPONSE_SIZE = 10 * 1024 * 1024
 # Request timeout in seconds
 REQUEST_TIMEOUT = 30.0
 
+# Identify this client by name. httpx otherwise sends `python-httpx/<version>`,
+# which Cloudflare's bot protection answers with an HTML challenge page instead
+# of the REST API: that is what broke the Educated Confusion instance
+# (RT #1596), whose zone has the protection on. A client that says what it is
+# and where to complain is also simply the polite thing to send.
+USER_AGENT = (
+    f"mcp-wordpress-crunchtools/{version('mcp-wordpress-crunchtools')} "
+    "(+https://github.com/crunchtools/mcp-wordpress)"
+)
+
 
 # WordPress returns a bare 404 for every collection, so the path is the only
 # clue to which kind of thing was missing.
@@ -39,6 +50,36 @@ _NOT_FOUND_BY_COLLECTION = {
     "media": MediaNotFoundError,
     "comments": CommentNotFoundError,
 }
+
+
+# How much of a non-JSON body to quote back. Enough to recognise an HTML
+# redirect page, a proxy error or a WAF block; short enough to stay readable.
+BODY_SNIPPET_CHARS = 200
+
+
+def _body_snippet(response: httpx.Response) -> str:
+    """A short, single-line excerpt of a response body, for an error message."""
+    try:
+        body = response.content
+    except httpx.ResponseNotRead:
+        return "<unreadable body>"
+    # Slice the bytes, then decode and normalise only that. A WAF page or a
+    # proxy error can be megabytes, and decoding all of it to keep the first
+    # 200 characters would copy it twice for nothing. Four times the snippet is
+    # enough slack for the whitespace a collapse removes. `replace` covers the
+    # multi-byte character the slice may cut in half.
+    prefix = body[: BODY_SNIPPET_CHARS * 4]
+    collapsed = " ".join(prefix.decode("utf-8", errors="replace").split())
+    if not collapsed:
+        return "<empty body>"
+    if len(collapsed) > BODY_SNIPPET_CHARS or len(body) > len(prefix):
+        return collapsed[:BODY_SNIPPET_CHARS] + "..."
+    return collapsed
+
+
+def _where(method: str, response: httpx.Response) -> str:
+    """Which site and URL a response came from, for an error message."""
+    return f"{method} {response.request.url} (HTTP {response.status_code})"
 
 
 def _not_found_error(path: str) -> UserError | None:
@@ -79,6 +120,7 @@ class WordPressClient:
                 base_url=self._config.api_base_url,
                 headers={
                     "Authorization": self._get_auth_header(),
+                    "User-Agent": USER_AGENT,
                 },
                 timeout=httpx.Timeout(REQUEST_TIMEOUT),
                 # Enable TLS certificate verification (default, but explicit)
@@ -146,20 +188,54 @@ class WordPressClient:
         except httpx.RequestError as e:
             raise WordPressApiError("request_failed", f"Request failed: {e}") from e
 
-        # Check response size before parsing
-        content_length = response.headers.get("content-length")
-        if content_length and int(content_length) > MAX_RESPONSE_SIZE:
-            raise WordPressApiError("response_too_large", "Response too large")
-
-        # Parse response
-        try:
-            payload: dict[str, Any] | list[Any] = response.json()
-        except ValueError as e:
-            raise WordPressApiError("invalid_json", f"Invalid JSON response: {e}") from e
+        payload = self._payload(method, response)
 
         # Handle error responses
         if not response.is_success:
             self._handle_error_response(response.status_code, payload, path)
+
+        return payload
+
+    def _payload(self, method: str, response: httpx.Response) -> dict[str, Any] | list[Any]:
+        """The decoded JSON body, or an error saying what came back instead.
+
+        Every failure here names the site, the URL and the status, because a
+        bare decode error cannot tell a site that is down from a base URL
+        that redirects (RT #1596).
+        """
+        content_length = response.headers.get("content-length")
+        if content_length and int(content_length) > MAX_RESPONSE_SIZE:
+            raise WordPressApiError(
+                "response_too_large",
+                f"{_where(method, response)} returned {content_length} bytes, "
+                f"over the {MAX_RESPONSE_SIZE} byte limit.",
+            )
+
+        # A redirect is never a WordPress REST answer, and its HTML body is
+        # what used to surface as "invalid JSON" with nothing to act on.
+        # Redirects are not followed, because this client carries a Basic Auth
+        # header that must not be forwarded to another host.
+        if response.is_redirect:
+            # ``is_redirect`` is only true when a Location header is present.
+            location = response.headers["location"]
+            raise WordPressApiError(
+                "unexpected_redirect",
+                f"{_where(method, response)} redirected to {location}. "
+                f"WORDPRESS_URL is set to {self._config.base_url}; set it to the "
+                "URL the site actually serves the REST API on, with no redirect.",
+            )
+
+        try:
+            payload: dict[str, Any] | list[Any] = response.json()
+        except ValueError as e:
+            content_type = response.headers.get("content-type", "<none>")
+            detail = (
+                f"{_where(method, response)} returned {content_type}, "
+                f"not JSON: {_body_snippet(response)}"
+            )
+            if not response.is_success:
+                raise WordPressApiError("http_error", detail) from e
+            raise WordPressApiError("invalid_json", detail) from e
 
         return payload
 

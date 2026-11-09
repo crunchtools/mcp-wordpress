@@ -1,0 +1,19 @@
+# Findings judged rather than fixed. A deferred one must link the ticket.
+
+[[findings]]
+agent = "constitution"
+category = "constitution"
+file = "src/mcp_wordpress_crunchtools/client.py"
+evidence = "content_length = response.headers.get(\"content-length\")\nif content_length and int(content_length) > MAX_RESPONSE_SIZE:"
+status = "deferred"
+reason = """
+Correct: the cap reads the content-length header, so a chunked reply that \
+sends none is unbounded, and the constitution's "responses above 10 MB are \
+rejected" does not hold for it. Enforcing it properly means reading the body \
+in bounded chunks instead of letting httpx buffer the whole thing, which \
+changes every call path in this client — the opposite of what RT #1596 asked \
+for, and the same gap exists in six other MCP servers, so the fix belongs in \
+the MCP Server profile rather than here. Tracked with the fleet-wide \
+User-Agent rule in https://acquacotta.crunchtools.com/#rt/ticket/1601 , and \
+carried for this repo by https://github.com/crunchtools/mcp-wordpress/issues/75
+"""
