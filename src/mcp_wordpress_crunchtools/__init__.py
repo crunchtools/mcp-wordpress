@@ -33,7 +33,7 @@ import tempfile
 
 from .server import mcp
 
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 __all__ = ["main", "mcp"]
 
 DEFAULT_UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "mcp-uploads")
