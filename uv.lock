@@ -1078,7 +1078,7 @@ wheels = [
 
 [[package]]
 name = "mcp-wordpress-crunchtools"
-version = "0.8.4"
+version = "0.8.5"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
