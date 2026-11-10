@@ -8,6 +8,18 @@ Entries prior to 2026-09-19 are back-filled from GitHub Release notes (RT #1484)
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-11-10
+
+### Fixed
+
+- The container build installed dependencies with `pip install .`, which
+  reads only `pyproject.toml`'s floor-pins and lets pip resolve fresh
+  versions pip has never been tested against. A new `lock` build stage now
+  runs `uv export` against the committed, Dependabot-maintained `uv.lock`
+  and the builder stage installs that locked set with `--no-deps` before
+  installing the project itself, also with `--no-deps`, so pip cannot
+  silently re-resolve anything. Part of RT#1564.
+
 ## [0.8.4] - 2026-11-09
 
 ### Security
