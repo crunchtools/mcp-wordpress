@@ -110,3 +110,12 @@ skip = ["semgrep"]
 [tool.sdlc.push.pytest]
 env = { WORDPRESS_URL = "https://example.com", WORDPRESS_USERNAME = "test_user_for_ci", WORDPRESS_APP_PASSWORD = "test_password_for_ci" }
 
+[tool.sdlc]
+# Written by crunchtools/sdlc's scripts/convert_repo.py: moved from the workflows.
+publish = "pypi"
+
+[tool.sdlc.image]
+# Written by crunchtools/sdlc's scripts/convert_repo.py: moved from the workflows.
+image = "quay.io/crunchtools/mcp-wordpress"
+boot = "mcp"
+boot-env = "WORDPRESS_URL=https://example.invalid\nWORDPRESS_USERNAME=gate-dummy\nWORDPRESS_APP_PASSWORD=gate-dummy-gate-dummy\n"
