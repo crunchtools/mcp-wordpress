@@ -112,4 +112,13 @@ env = { WORDPRESS_URL = "https://example.com", WORDPRESS_USERNAME = "test_user_f
 
 
 [tool.sdlc]
+stacks = ["python", "container"]  # gate the Containerfile on every pull request
+# Written by crunchtools/sdlc's scripts/convert_repo.py: moved from the workflows.
+publish = "pypi"
 repo-kinds = ["mcp-server"]
+
+[tool.sdlc.image]
+# Written by crunchtools/sdlc's scripts/convert_repo.py: moved from the workflows.
+image = "quay.io/crunchtools/mcp-wordpress"
+boot = "mcp"
+boot-env = "WORDPRESS_URL=https://example.invalid\nWORDPRESS_USERNAME=gate-dummy\nWORDPRESS_APP_PASSWORD=gate-dummy-gate-dummy\n"
